@@ -1,0 +1,28 @@
+
+=========== Cache-Sim Report ============
+Total instructions       : 152824
+  memory instructions    : 49790
+    reads                : 35531
+    writes               : 14259
+
+L1 accesses              : 49790   misses: 2278   MPKI: 14.90604
+L2 accesses              : 2278   misses: 1960   MPKI: 12.82521
+
+  Clist Accesses: 0 (0.00000%)
+  Unclist Accesses: 1960 (100.00000%)
+  Cpage   Accesses: 0 (0.00000%)
+==========================================
+
+=========== Cache-Sim Report ============
+Total instructions       : 152824
+  memory instructions    : 49790
+    reads                : 35531
+    writes               : 14259
+
+L1 accesses              : 49790   misses: 2281   MPKI: 14.92567
+L2 accesses              : 2281   misses: 1960   MPKI: 12.82521
+
+  Clist Accesses: 1045 (53.31632%)
+  Unclist Accesses: 547 (27.90816%)
+  Cpage   Accesses: 368 (18.77551%)
+==========================================

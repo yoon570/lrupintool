@@ -1,0 +1,500 @@
+
+EFREQ:100, UFREQ:100
+RSS pages          = 10000
+Uncompressed pages = 2000 (20%)
+Compressed pages   = 8000 (80%)
+0% 20% 40% 60% 80% 100% Done.
+
+=========== Cache-Sim Report ============
+Total instructions       : 52500188
+  memory instructions    : 21289029
+    reads                : 14224667
+    writes               : 7064362
+
+L1 accesses              : 21289029   misses: 1012202   MPKI: 19.27997
+L2 accesses              : 1012202   misses: 1011906   MPKI: 19.27433
+
+  Clist Accesses: 4336 (0.42850%)
+  Unclist Accesses: 197363 (19.50408%)
+  Cpage   Accesses: 810207 (80.06742%)
+==========================================
+
+EFREQ:100, UFREQ:1000
+RSS pages          = 10000
+Uncompressed pages = 2000 (20%)
+Compressed pages   = 8000 (80%)
+0% 20% 40% 60% 80% 100% Done.
+
+=========== Cache-Sim Report ============
+Total instructions       : 52500188
+  memory instructions    : 21289029
+    reads                : 14224667
+    writes               : 7064362
+
+L1 accesses              : 21289029   misses: 1012210   MPKI: 19.28012
+L2 accesses              : 1012210   misses: 1011907   MPKI: 19.27435
+
+  Clist Accesses: 4335 (0.42840%)
+  Unclist Accesses: 197365 (19.50426%)
+  Cpage   Accesses: 810207 (80.06734%)
+==========================================
+
+EFREQ:100, UFREQ:10000
+RSS pages          = 10000
+Uncompressed pages = 2000 (20%)
+Compressed pages   = 8000 (80%)
+0% 20% 40% 60% 80% 100% Done.
+
+=========== Cache-Sim Report ============
+Total instructions       : 52500188
+  memory instructions    : 21289029
+    reads                : 14224667
+    writes               : 7064362
+
+L1 accesses              : 21289029   misses: 1012206   MPKI: 19.28005
+L2 accesses              : 1012206   misses: 1011906   MPKI: 19.27433
+
+  Clist Accesses: 4335 (0.42840%)
+  Unclist Accesses: 197364 (19.50418%)
+  Cpage   Accesses: 810207 (80.06742%)
+==========================================
+
+EFREQ:100, UFREQ:100000
+RSS pages          = 10000
+Uncompressed pages = 2000 (20%)
+Compressed pages   = 8000 (80%)
+0% 20% 40% 60% 80% 100% Done.
+
+=========== Cache-Sim Report ============
+Total instructions       : 52500188
+  memory instructions    : 21289029
+    reads                : 14224667
+    writes               : 7064362
+
+L1 accesses              : 21289029   misses: 1012214   MPKI: 19.28020
+L2 accesses              : 1012214   misses: 1011913   MPKI: 19.27446
+
+  Clist Accesses: 4336 (0.42850%)
+  Unclist Accesses: 197364 (19.50405%)
+  Cpage   Accesses: 810213 (80.06746%)
+==========================================
+
+EFREQ:100, UFREQ:1000000
+RSS pages          = 10000
+Uncompressed pages = 2000 (20%)
+Compressed pages   = 8000 (80%)
+0% 20% 40% 60% 80% 100% Done.
+
+=========== Cache-Sim Report ============
+Total instructions       : 52500188
+  memory instructions    : 21289029
+    reads                : 14224667
+    writes               : 7064362
+
+L1 accesses              : 21289029   misses: 1012209   MPKI: 19.28010
+L2 accesses              : 1012209   misses: 1011907   MPKI: 19.27435
+
+  Clist Accesses: 4335 (0.42840%)
+  Unclist Accesses: 197365 (19.50426%)
+  Cpage   Accesses: 810207 (80.06734%)
+==========================================
+
+EFREQ:1000, UFREQ:100
+RSS pages          = 10000
+Uncompressed pages = 2000 (20%)
+Compressed pages   = 8000 (80%)
+0% 20% 40% 60% 80% 100% Done.
+
+=========== Cache-Sim Report ============
+Total instructions       : 52500188
+  memory instructions    : 21289029
+    reads                : 14224667
+    writes               : 7064362
+
+L1 accesses              : 21289029   misses: 1012207   MPKI: 19.28006
+L2 accesses              : 1012207   misses: 1011907   MPKI: 19.27435
+
+  Clist Accesses: 4001 (0.39539%)
+  Unclist Accesses: 203777 (20.13792%)
+  Cpage   Accesses: 804129 (79.46669%)
+==========================================
+
+EFREQ:1000, UFREQ:1000
+RSS pages          = 10000
+Uncompressed pages = 2000 (20%)
+Compressed pages   = 8000 (80%)
+0% 20% 40% 60% 80% 100% Done.
+
+=========== Cache-Sim Report ============
+Total instructions       : 52500188
+  memory instructions    : 21289029
+    reads                : 14224667
+    writes               : 7064362
+
+L1 accesses              : 21289029   misses: 1012202   MPKI: 19.27997
+L2 accesses              : 1012202   misses: 1011906   MPKI: 19.27433
+
+  Clist Accesses: 4001 (0.39539%)
+  Unclist Accesses: 192723 (19.04554%)
+  Cpage   Accesses: 815182 (80.55906%)
+==========================================
+
+EFREQ:1000, UFREQ:10000
+RSS pages          = 10000
+Uncompressed pages = 2000 (20%)
+Compressed pages   = 8000 (80%)
+0% 20% 40% 60% 80% 100% Done.
+
+=========== Cache-Sim Report ============
+Total instructions       : 52500188
+  memory instructions    : 21289029
+    reads                : 14224667
+    writes               : 7064362
+
+L1 accesses              : 21289029   misses: 1012207   MPKI: 19.28006
+L2 accesses              : 1012207   misses: 1011906   MPKI: 19.27433
+
+  Clist Accesses: 4001 (0.39539%)
+  Unclist Accesses: 192723 (19.04554%)
+  Cpage   Accesses: 815182 (80.55906%)
+==========================================
+
+EFREQ:1000, UFREQ:100000
+RSS pages          = 10000
+Uncompressed pages = 2000 (20%)
+Compressed pages   = 8000 (80%)
+0% 20% 40% 60% 80% 100% Done.
+
+=========== Cache-Sim Report ============
+Total instructions       : 52500188
+  memory instructions    : 21289029
+    reads                : 14224667
+    writes               : 7064362
+
+L1 accesses              : 21289029   misses: 1012206   MPKI: 19.28005
+L2 accesses              : 1012206   misses: 1011906   MPKI: 19.27433
+
+  Clist Accesses: 4001 (0.39539%)
+  Unclist Accesses: 192723 (19.04554%)
+  Cpage   Accesses: 815182 (80.55906%)
+==========================================
+
+EFREQ:1000, UFREQ:1000000
+RSS pages          = 10000
+Uncompressed pages = 2000 (20%)
+Compressed pages   = 8000 (80%)
+0% 20% 40% 60% 80% 100% Done.
+
+=========== Cache-Sim Report ============
+Total instructions       : 52500188
+  memory instructions    : 21289029
+    reads                : 14224667
+    writes               : 7064362
+
+L1 accesses              : 21289029   misses: 1012210   MPKI: 19.28012
+L2 accesses              : 1012210   misses: 1011908   MPKI: 19.27437
+
+  Clist Accesses: 4001 (0.39539%)
+  Unclist Accesses: 192724 (19.04560%)
+  Cpage   Accesses: 815183 (80.55900%)
+==========================================
+
+EFREQ:10000, UFREQ:100
+RSS pages          = 10000
+Uncompressed pages = 2000 (20%)
+Compressed pages   = 8000 (80%)
+0% 20% 40% 60% 80% 100% Done.
+
+=========== Cache-Sim Report ============
+Total instructions       : 52500188
+  memory instructions    : 21289029
+    reads                : 14224667
+    writes               : 7064362
+
+L1 accesses              : 21289029   misses: 1012205   MPKI: 19.28003
+L2 accesses              : 1012205   misses: 1011906   MPKI: 19.27433
+
+  Clist Accesses: 4000 (0.39529%)
+  Unclist Accesses: 198673 (19.63354%)
+  Cpage   Accesses: 809233 (79.97116%)
+==========================================
+
+EFREQ:10000, UFREQ:1000
+RSS pages          = 10000
+Uncompressed pages = 2000 (20%)
+Compressed pages   = 8000 (80%)
+0% 20% 40% 60% 80% 100% Done.
+
+=========== Cache-Sim Report ============
+Total instructions       : 52500188
+  memory instructions    : 21289029
+    reads                : 14224667
+    writes               : 7064362
+
+L1 accesses              : 21289029   misses: 1012216   MPKI: 19.28024
+L2 accesses              : 1012216   misses: 1011913   MPKI: 19.27446
+
+  Clist Accesses: 4000 (0.39529%)
+  Unclist Accesses: 198479 (19.61424%)
+  Cpage   Accesses: 809434 (79.99048%)
+==========================================
+
+EFREQ:10000, UFREQ:10000
+RSS pages          = 10000
+Uncompressed pages = 2000 (20%)
+Compressed pages   = 8000 (80%)
+0% 20% 40% 60% 80% 100% Done.
+
+=========== Cache-Sim Report ============
+Total instructions       : 52500188
+  memory instructions    : 21289029
+    reads                : 14224667
+    writes               : 7064362
+
+L1 accesses              : 21289029   misses: 1012209   MPKI: 19.28010
+L2 accesses              : 1012209   misses: 1011907   MPKI: 19.27435
+
+  Clist Accesses: 4001 (0.39539%)
+  Unclist Accesses: 202279 (19.98988%)
+  Cpage   Accesses: 805627 (79.61473%)
+==========================================
+
+EFREQ:10000, UFREQ:100000
+RSS pages          = 10000
+Uncompressed pages = 2000 (20%)
+Compressed pages   = 8000 (80%)
+0% 20% 40% 60% 80% 100% Done.
+
+=========== Cache-Sim Report ============
+Total instructions       : 52500188
+  memory instructions    : 21289029
+    reads                : 14224667
+    writes               : 7064362
+
+L1 accesses              : 21289029   misses: 1012205   MPKI: 19.28003
+L2 accesses              : 1012205   misses: 1011906   MPKI: 19.27433
+
+  Clist Accesses: 4001 (0.39539%)
+  Unclist Accesses: 202278 (19.98980%)
+  Cpage   Accesses: 805627 (79.61481%)
+==========================================
+
+EFREQ:10000, UFREQ:1000000
+RSS pages          = 10000
+Uncompressed pages = 2000 (20%)
+Compressed pages   = 8000 (80%)
+0% 20% 40% 60% 80% 100% Done.
+
+=========== Cache-Sim Report ============
+Total instructions       : 52500188
+  memory instructions    : 21289029
+    reads                : 14224667
+    writes               : 7064362
+
+L1 accesses              : 21289029   misses: 1012206   MPKI: 19.28005
+L2 accesses              : 1012206   misses: 1011906   MPKI: 19.27433
+
+  Clist Accesses: 4001 (0.39539%)
+  Unclist Accesses: 202272 (19.98921%)
+  Cpage   Accesses: 805633 (79.61540%)
+==========================================
+
+EFREQ:100000, UFREQ:100
+RSS pages          = 10000
+Uncompressed pages = 2000 (20%)
+Compressed pages   = 8000 (80%)
+0% 20% 40% 60% 80% 100% Done.
+
+=========== Cache-Sim Report ============
+Total instructions       : 52500188
+  memory instructions    : 21289029
+    reads                : 14224667
+    writes               : 7064362
+
+L1 accesses              : 21289029   misses: 1012207   MPKI: 19.28006
+L2 accesses              : 1012207   misses: 1011907   MPKI: 19.27435
+
+  Clist Accesses: 4000 (0.39529%)
+  Unclist Accesses: 195220 (19.29229%)
+  Cpage   Accesses: 812687 (80.31242%)
+==========================================
+
+EFREQ:100000, UFREQ:1000
+RSS pages          = 10000
+Uncompressed pages = 2000 (20%)
+Compressed pages   = 8000 (80%)
+0% 20% 40% 60% 80% 100% Done.
+
+=========== Cache-Sim Report ============
+Total instructions       : 52500188
+  memory instructions    : 21289029
+    reads                : 14224667
+    writes               : 7064362
+
+L1 accesses              : 21289029   misses: 1012210   MPKI: 19.28012
+L2 accesses              : 1012210   misses: 1011913   MPKI: 19.27446
+
+  Clist Accesses: 4000 (0.39529%)
+  Unclist Accesses: 195226 (19.29277%)
+  Cpage   Accesses: 812687 (80.31194%)
+==========================================
+
+EFREQ:100000, UFREQ:10000
+RSS pages          = 10000
+Uncompressed pages = 2000 (20%)
+Compressed pages   = 8000 (80%)
+0% 20% 40% 60% 80% 100% Done.
+
+=========== Cache-Sim Report ============
+Total instructions       : 52500188
+  memory instructions    : 21289029
+    reads                : 14224667
+    writes               : 7064362
+
+L1 accesses              : 21289029   misses: 1012203   MPKI: 19.27999
+L2 accesses              : 1012203   misses: 1011906   MPKI: 19.27433
+
+  Clist Accesses: 4000 (0.39529%)
+  Unclist Accesses: 195118 (19.28223%)
+  Cpage   Accesses: 812788 (80.32248%)
+==========================================
+
+EFREQ:100000, UFREQ:100000
+RSS pages          = 10000
+Uncompressed pages = 2000 (20%)
+Compressed pages   = 8000 (80%)
+0% 20% 40% 60% 80% 100% Done.
+
+=========== Cache-Sim Report ============
+Total instructions       : 52500188
+  memory instructions    : 21289029
+    reads                : 14224667
+    writes               : 7064362
+
+L1 accesses              : 21289029   misses: 1012205   MPKI: 19.28003
+L2 accesses              : 1012205   misses: 1011906   MPKI: 19.27433
+
+  Clist Accesses: 4001 (0.39539%)
+  Unclist Accesses: 201915 (19.95393%)
+  Cpage   Accesses: 805990 (79.65068%)
+==========================================
+
+EFREQ:100000, UFREQ:1000000
+RSS pages          = 10000
+Uncompressed pages = 2000 (20%)
+Compressed pages   = 8000 (80%)
+0% 20% 40% 60% 80% 100% Done.
+
+=========== Cache-Sim Report ============
+Total instructions       : 52500188
+  memory instructions    : 21289029
+    reads                : 14224667
+    writes               : 7064362
+
+L1 accesses              : 21289029   misses: 1012205   MPKI: 19.28003
+L2 accesses              : 1012205   misses: 1011906   MPKI: 19.27433
+
+  Clist Accesses: 4001 (0.39539%)
+  Unclist Accesses: 201915 (19.95393%)
+  Cpage   Accesses: 805990 (79.65068%)
+==========================================
+
+EFREQ:1000000, UFREQ:100
+RSS pages          = 10000
+Uncompressed pages = 2000 (20%)
+Compressed pages   = 8000 (80%)
+0% 20% 40% 60% 80% 100% Done.
+
+=========== Cache-Sim Report ============
+Total instructions       : 52500188
+  memory instructions    : 21289029
+    reads                : 14224667
+    writes               : 7064362
+
+L1 accesses              : 21289029   misses: 1012206   MPKI: 19.28005
+L2 accesses              : 1012206   misses: 1011907   MPKI: 19.27435
+
+  Clist Accesses: 4000 (0.39529%)
+  Unclist Accesses: 195019 (19.27242%)
+  Cpage   Accesses: 812888 (80.33229%)
+==========================================
+
+EFREQ:1000000, UFREQ:1000
+RSS pages          = 10000
+Uncompressed pages = 2000 (20%)
+Compressed pages   = 8000 (80%)
+0% 20% 40% 60% 80% 100% Done.
+
+=========== Cache-Sim Report ============
+Total instructions       : 52500188
+  memory instructions    : 21289029
+    reads                : 14224667
+    writes               : 7064362
+
+L1 accesses              : 21289029   misses: 1012206   MPKI: 19.28005
+L2 accesses              : 1012206   misses: 1011906   MPKI: 19.27433
+
+  Clist Accesses: 4000 (0.39529%)
+  Unclist Accesses: 195018 (19.27234%)
+  Cpage   Accesses: 812888 (80.33236%)
+==========================================
+
+EFREQ:1000000, UFREQ:10000
+RSS pages          = 10000
+Uncompressed pages = 2000 (20%)
+Compressed pages   = 8000 (80%)
+0% 20% 40% 60% 80% 100% Done.
+
+=========== Cache-Sim Report ============
+Total instructions       : 52500188
+  memory instructions    : 21289029
+    reads                : 14224667
+    writes               : 7064362
+
+L1 accesses              : 21289029   misses: 1012205   MPKI: 19.28003
+L2 accesses              : 1012205   misses: 1011906   MPKI: 19.27433
+
+  Clist Accesses: 4000 (0.39529%)
+  Unclist Accesses: 195119 (19.28232%)
+  Cpage   Accesses: 812787 (80.32238%)
+==========================================
+
+EFREQ:1000000, UFREQ:100000
+RSS pages          = 10000
+Uncompressed pages = 2000 (20%)
+Compressed pages   = 8000 (80%)
+0% 20% 40% 60% 80% 100% Done.
+
+=========== Cache-Sim Report ============
+Total instructions       : 52500188
+  memory instructions    : 21289029
+    reads                : 14224667
+    writes               : 7064362
+
+L1 accesses              : 21289029   misses: 1012207   MPKI: 19.28006
+L2 accesses              : 1012207   misses: 1011912   MPKI: 19.27445
+
+  Clist Accesses: 4000 (0.39529%)
+  Unclist Accesses: 195125 (19.28280%)
+  Cpage   Accesses: 812787 (80.32191%)
+==========================================
+
+EFREQ:1000000, UFREQ:1000000
+RSS pages          = 10000
+Uncompressed pages = 2000 (20%)
+Compressed pages   = 8000 (80%)
+0% 20% 40% 60% 80% 100% Done.
+
+=========== Cache-Sim Report ============
+Total instructions       : 52500188
+  memory instructions    : 21289029
+    reads                : 14224667
+    writes               : 7064362
+
+L1 accesses              : 21289029   misses: 1012209   MPKI: 19.28010
+L2 accesses              : 1012209   misses: 1011906   MPKI: 19.27433
+
+  Clist Accesses: 4000 (0.39529%)
+  Unclist Accesses: 196137 (19.38293%)
+  Cpage   Accesses: 811769 (80.22178%)
+==========================================

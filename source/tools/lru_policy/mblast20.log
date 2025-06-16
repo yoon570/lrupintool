@@ -1,0 +1,425 @@
+
+EFREQ:100, UFREQ:100
+0% 20% 40% 60% 80% 100% 
+
+=========== Cache-Sim Report ============
+Total instructions       : 49358495
+  memory instructions    : 24198169
+    reads                : 17134190
+    writes               : 7063979
+
+L1 accesses              : 24198169   misses: 1012206   MPKI: 20.50723
+L2 accesses              : 1012206   misses: 1011902   MPKI: 20.50107
+
+  Clist Accesses: 9830 (0.97144%)
+  Unclist Accesses: 837267 (82.74190%)
+  Cpage   Accesses: 164805 (16.28666%)
+==========================================
+
+EFREQ:100, UFREQ:1000
+0% 20% 40% 60% 80% 100% 
+
+=========== Cache-Sim Report ============
+Total instructions       : 49358495
+  memory instructions    : 24198169
+    reads                : 17134190
+    writes               : 7063979
+
+L1 accesses              : 24198169   misses: 1012204   MPKI: 20.50719
+L2 accesses              : 1012204   misses: 1011901   MPKI: 20.50105
+
+  Clist Accesses: 9830 (0.97144%)
+  Unclist Accesses: 837266 (82.74189%)
+  Cpage   Accesses: 164805 (16.28667%)
+==========================================
+
+EFREQ:100, UFREQ:10000
+0% 20% 40% 60% 80% 100% 
+
+=========== Cache-Sim Report ============
+Total instructions       : 49358495
+  memory instructions    : 24198169
+    reads                : 17134190
+    writes               : 7063979
+
+L1 accesses              : 24198169   misses: 1012210   MPKI: 20.50731
+L2 accesses              : 1012210   misses: 1011908   MPKI: 20.50119
+
+  Clist Accesses: 9833 (0.97173%)
+  Unclist Accesses: 837267 (82.74142%)
+  Cpage   Accesses: 164808 (16.28686%)
+==========================================
+
+EFREQ:100, UFREQ:100000
+0% 20% 40% 60% 80% 100% 
+
+=========== Cache-Sim Report ============
+Total instructions       : 49358495
+  memory instructions    : 24198169
+    reads                : 17134190
+    writes               : 7063979
+
+L1 accesses              : 24198169   misses: 1012201   MPKI: 20.50713
+L2 accesses              : 1012201   misses: 1011902   MPKI: 20.50107
+
+  Clist Accesses: 9830 (0.97144%)
+  Unclist Accesses: 837267 (82.74190%)
+  Cpage   Accesses: 164805 (16.28666%)
+==========================================
+
+EFREQ:100, UFREQ:1000000
+0% 20% 40% 60% 80% 100% 
+
+=========== Cache-Sim Report ============
+Total instructions       : 49358495
+  memory instructions    : 24198169
+    reads                : 17134190
+    writes               : 7063979
+
+L1 accesses              : 24198169   misses: 1012206   MPKI: 20.50723
+L2 accesses              : 1012206   misses: 1011907   MPKI: 20.50117
+
+  Clist Accesses: 9833 (0.97173%)
+  Unclist Accesses: 837266 (82.74140%)
+  Cpage   Accesses: 164808 (16.28687%)
+==========================================
+
+EFREQ:1000, UFREQ:100
+0% 20% 40% 60% 80% 100% 
+
+=========== Cache-Sim Report ============
+Total instructions       : 49358495
+  memory instructions    : 24198169
+    reads                : 17134190
+    writes               : 7063979
+
+L1 accesses              : 24198169   misses: 1012204   MPKI: 20.50719
+L2 accesses              : 1012204   misses: 1011902   MPKI: 20.50107
+
+  Clist Accesses: 780084 (77.09087%)
+  Unclist Accesses: 73499 (7.26345%)
+  Cpage   Accesses: 158319 (15.64569%)
+==========================================
+
+EFREQ:1000, UFREQ:1000
+0% 20% 40% 60% 80% 100% 
+
+=========== Cache-Sim Report ============
+Total instructions       : 49358495
+  memory instructions    : 24198169
+    reads                : 17134190
+    writes               : 7063979
+
+L1 accesses              : 24198169   misses: 1012208   MPKI: 20.50727
+L2 accesses              : 1012208   misses: 1011907   MPKI: 20.50117
+
+  Clist Accesses: 48616 (4.80439%)
+  Unclist Accesses: 797631 (78.82454%)
+  Cpage   Accesses: 165660 (16.37107%)
+==========================================
+
+EFREQ:1000, UFREQ:10000
+0% 20% 40% 60% 80% 100% 
+
+=========== Cache-Sim Report ============
+Total instructions       : 49358495
+  memory instructions    : 24198169
+    reads                : 17134190
+    writes               : 7063979
+
+L1 accesses              : 24198169   misses: 1012204   MPKI: 20.50719
+L2 accesses              : 1012204   misses: 1011901   MPKI: 20.50105
+
+  Clist Accesses: 48612 (4.80403%)
+  Unclist Accesses: 797641 (78.82599%)
+  Cpage   Accesses: 165648 (16.36998%)
+==========================================
+
+EFREQ:1000, UFREQ:100000
+0% 20% 40% 60% 80% 100% 
+
+=========== Cache-Sim Report ============
+Total instructions       : 49358495
+  memory instructions    : 24198169
+    reads                : 17134190
+    writes               : 7063979
+
+L1 accesses              : 24198169   misses: 1012210   MPKI: 20.50731
+L2 accesses              : 1012210   misses: 1011908   MPKI: 20.50119
+
+  Clist Accesses: 48616 (4.80439%)
+  Unclist Accesses: 797632 (78.82456%)
+  Cpage   Accesses: 165660 (16.37105%)
+==========================================
+
+EFREQ:1000, UFREQ:1000000
+0% 20% 40% 60% 80% 100% 
+
+=========== Cache-Sim Report ============
+Total instructions       : 49358495
+  memory instructions    : 24198169
+    reads                : 17134190
+    writes               : 7063979
+
+L1 accesses              : 24198169   misses: 1012203   MPKI: 20.50717
+L2 accesses              : 1012203   misses: 1011901   MPKI: 20.50105
+
+  Clist Accesses: 48612 (4.80403%)
+  Unclist Accesses: 797641 (78.82599%)
+  Cpage   Accesses: 165648 (16.36998%)
+==========================================
+
+EFREQ:10000, UFREQ:100
+0% 20% 40% 60% 80% 100% 
+
+=========== Cache-Sim Report ============
+Total instructions       : 49358495
+  memory instructions    : 24198169
+    reads                : 17134190
+    writes               : 7063979
+
+L1 accesses              : 24198169   misses: 1012208   MPKI: 20.50727
+L2 accesses              : 1012208   misses: 1011907   MPKI: 20.50117
+
+  Clist Accesses: 801611 (79.21785%)
+  Unclist Accesses: 55095 (5.44467%)
+  Cpage   Accesses: 155201 (15.33748%)
+==========================================
+
+EFREQ:10000, UFREQ:1000
+0% 20% 40% 60% 80% 100% 
+
+=========== Cache-Sim Report ============
+Total instructions       : 49358495
+  memory instructions    : 24198169
+    reads                : 17134190
+    writes               : 7063979
+
+L1 accesses              : 24198169   misses: 1012206   MPKI: 20.50723
+L2 accesses              : 1012206   misses: 1011902   MPKI: 20.50107
+
+  Clist Accesses: 801610 (79.21814%)
+  Unclist Accesses: 55216 (5.45665%)
+  Cpage   Accesses: 155076 (15.32520%)
+==========================================
+
+EFREQ:10000, UFREQ:10000
+0% 20% 40% 60% 80% 100% 
+
+=========== Cache-Sim Report ============
+Total instructions       : 49358495
+  memory instructions    : 24198169
+    reads                : 17134190
+    writes               : 7063979
+
+L1 accesses              : 24198169   misses: 1012209   MPKI: 20.50729
+L2 accesses              : 1012209   misses: 1011907   MPKI: 20.50117
+
+  Clist Accesses: 438487 (43.33274%)
+  Unclist Accesses: 376875 (37.24403%)
+  Cpage   Accesses: 196545 (19.42323%)
+==========================================
+
+EFREQ:10000, UFREQ:100000
+0% 20% 40% 60% 80% 100% 
+
+=========== Cache-Sim Report ============
+Total instructions       : 49358495
+  memory instructions    : 24198169
+    reads                : 17134190
+    writes               : 7063979
+
+L1 accesses              : 24198169   misses: 1012205   MPKI: 20.50721
+L2 accesses              : 1012205   misses: 1011901   MPKI: 20.50105
+
+  Clist Accesses: 438494 (43.33369%)
+  Unclist Accesses: 376866 (37.24337%)
+  Cpage   Accesses: 196541 (19.42295%)
+==========================================
+
+EFREQ:10000, UFREQ:1000000
+0% 20% 40% 60% 80% 100% 
+
+=========== Cache-Sim Report ============
+Total instructions       : 49358495
+  memory instructions    : 24198169
+    reads                : 17134190
+    writes               : 7063979
+
+L1 accesses              : 24198169   misses: 1012207   MPKI: 20.50725
+L2 accesses              : 1012207   misses: 1011902   MPKI: 20.50107
+
+  Clist Accesses: 438881 (43.37189%)
+  Unclist Accesses: 376478 (37.20499%)
+  Cpage   Accesses: 196543 (19.42313%)
+==========================================
+
+EFREQ:100000, UFREQ:100
+0% 20% 40% 60% 80% 100% 
+
+=========== Cache-Sim Report ============
+Total instructions       : 49358495
+  memory instructions    : 24198169
+    reads                : 17134190
+    writes               : 7063979
+
+L1 accesses              : 24198169   misses: 1012204   MPKI: 20.50719
+L2 accesses              : 1012204   misses: 1011902   MPKI: 20.50107
+
+  Clist Accesses: 803605 (79.41530%)
+  Unclist Accesses: 52133 (5.15198%)
+  Cpage   Accesses: 156164 (15.43272%)
+==========================================
+
+EFREQ:100000, UFREQ:1000
+0% 20% 40% 60% 80% 100% 
+
+=========== Cache-Sim Report ============
+Total instructions       : 49358495
+  memory instructions    : 24198169
+    reads                : 17134190
+    writes               : 7063979
+
+L1 accesses              : 24198169   misses: 1012205   MPKI: 20.50721
+L2 accesses              : 1012205   misses: 1011901   MPKI: 20.50105
+
+  Clist Accesses: 803605 (79.41537%)
+  Unclist Accesses: 52133 (5.15199%)
+  Cpage   Accesses: 156163 (15.43264%)
+==========================================
+
+EFREQ:100000, UFREQ:10000
+0% 20% 40% 60% 80% 100% 
+
+=========== Cache-Sim Report ============
+Total instructions       : 49358495
+  memory instructions    : 24198169
+    reads                : 17134190
+    writes               : 7063979
+
+L1 accesses              : 24198169   misses: 1012202   MPKI: 20.50715
+L2 accesses              : 1012202   misses: 1011902   MPKI: 20.50107
+
+  Clist Accesses: 803605 (79.41530%)
+  Unclist Accesses: 52183 (5.15692%)
+  Cpage   Accesses: 156114 (15.42778%)
+==========================================
+
+EFREQ:100000, UFREQ:100000
+0% 20% 40% 60% 80% 100% 
+
+=========== Cache-Sim Report ============
+Total instructions       : 49358495
+  memory instructions    : 24198169
+    reads                : 17134190
+    writes               : 7063979
+
+L1 accesses              : 24198169   misses: 1012205   MPKI: 20.50721
+L2 accesses              : 1012205   misses: 1011906   MPKI: 20.50115
+
+  Clist Accesses: 770471 (76.14057%)
+  Unclist Accesses: 82602 (8.16301%)
+  Cpage   Accesses: 158833 (15.69642%)
+==========================================
+
+EFREQ:100000, UFREQ:1000000
+0% 20% 40% 60% 80% 100% 
+
+=========== Cache-Sim Report ============
+Total instructions       : 49358495
+  memory instructions    : 24198169
+    reads                : 17134190
+    writes               : 7063979
+
+L1 accesses              : 24198169   misses: 1012199   MPKI: 20.50709
+L2 accesses              : 1012199   misses: 1011902   MPKI: 20.50107
+
+  Clist Accesses: 770422 (76.13603%)
+  Unclist Accesses: 82646 (8.16739%)
+  Cpage   Accesses: 158834 (15.69658%)
+==========================================
+
+EFREQ:1000000, UFREQ:100
+0% 20% 40% 60% 80% 100% 
+
+=========== Cache-Sim Report ============
+Total instructions       : 49358495
+  memory instructions    : 24198169
+    reads                : 17134190
+    writes               : 7063979
+
+L1 accesses              : 24198169   misses: 1012201   MPKI: 20.50713
+L2 accesses              : 1012201   misses: 1011902   MPKI: 20.50107
+
+  Clist Accesses: 803623 (79.41708%)
+  Unclist Accesses: 52091 (5.14783%)
+  Cpage   Accesses: 156188 (15.43509%)
+==========================================
+
+EFREQ:1000000, UFREQ:1000
+0% 20% 40% 60% 80% 100% 
+
+=========== Cache-Sim Report ============
+Total instructions       : 49358495
+  memory instructions    : 24198169
+    reads                : 17134190
+    writes               : 7063979
+
+L1 accesses              : 24198169   misses: 1012205   MPKI: 20.50721
+L2 accesses              : 1012205   misses: 1011901   MPKI: 20.50105
+
+  Clist Accesses: 803623 (79.41716%)
+  Unclist Accesses: 52116 (5.15031%)
+  Cpage   Accesses: 156162 (15.43254%)
+==========================================
+
+EFREQ:1000000, UFREQ:10000
+0% 20% 40% 60% 80% 100% 
+
+=========== Cache-Sim Report ============
+Total instructions       : 49358495
+  memory instructions    : 24198169
+    reads                : 17134190
+    writes               : 7063979
+
+L1 accesses              : 24198169   misses: 1012206   MPKI: 20.50723
+L2 accesses              : 1012206   misses: 1011902   MPKI: 20.50107
+
+  Clist Accesses: 803623 (79.41708%)
+  Unclist Accesses: 52091 (5.14783%)
+  Cpage   Accesses: 156188 (15.43509%)
+==========================================
+
+EFREQ:1000000, UFREQ:100000
+0% 20% 40% 60% 80% 100% 
+
+=========== Cache-Sim Report ============
+Total instructions       : 49358495
+  memory instructions    : 24198169
+    reads                : 17134190
+    writes               : 7063979
+
+L1 accesses              : 24198169   misses: 1012203   MPKI: 20.50717
+L2 accesses              : 1012203   misses: 1011903   MPKI: 20.50109
+
+  Clist Accesses: 803623 (79.41700%)
+  Unclist Accesses: 52118 (5.15049%)
+  Cpage   Accesses: 156162 (15.43251%)
+==========================================
+
+EFREQ:1000000, UFREQ:1000000
+0% 20% 40% 60% 80% 100% 
+
+=========== Cache-Sim Report ============
+Total instructions       : 49358495
+  memory instructions    : 24198169
+    reads                : 17134190
+    writes               : 7063979
+
+L1 accesses              : 24198169   misses: 1012205   MPKI: 20.50721
+L2 accesses              : 1012205   misses: 1011901   MPKI: 20.50105
+
+  Clist Accesses: 800654 (79.12375%)
+  Unclist Accesses: 55115 (5.44668%)
+  Cpage   Accesses: 156132 (15.42957%)
+==========================================
