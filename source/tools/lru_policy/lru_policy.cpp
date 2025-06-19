@@ -5,6 +5,7 @@
 #include <type_traits>
 #include <iostream>
 #include <iomanip>
+#include <fstream>
 #include <vector>
 #include <cstdint>
 #include <atomic>
@@ -42,6 +43,9 @@ KNOB<UINT32> KnobPromoteCompressedFrequency
 KNOB<UINT32> KnobExpansionFrequency
 							(KNOB_MODE_WRITEONCE, "pintool", "exfreq",  "65536" ,
 							"Expansion frequency for promoting compressed page to uncompressed");
+KNOB<char* const> KnobOutfile
+							(KNOB_MODE_WRITEONCE, "pintool", "outfile",  "fini.out" ,
+							"Output location");
 
 // -----------------------------------------------------------------------
 // Constants
@@ -62,6 +66,8 @@ static std::atomic<uint64_t> lastReportIns{0};
 static std::atomic<uint64_t> expansionFrequency{0};
 static std::atomic<uint64_t> uc_epoch{0};   // since last unclist *mutation*
 static std::atomic<uint64_t> cl_epoch{0};   // since last clist  *mutation*
+
+std::ofstream Out; // output file
 
 HashLL * clist = nullptr;
 HashLL * unclist = nullptr;
@@ -397,7 +403,7 @@ VOID Instruction(INS ins, VOID*)
 				uint64_t l2Miss = L2 ? L2->Misses()   : 0;
 
 				// -------- print report --------
-				std::cerr << "\n[Report @ " << cur << " instructions]\n"
+				Out << "\n[Report @ " << cur << " instructions]\n"
 						<< "  L1 accesses : " << l1Acc
 						<< "\n  misses: "     << l1Miss
 						<< "\n  MPKI: "       << std::fixed << std::setprecision(2)
@@ -458,7 +464,7 @@ VOID Instruction(INS ins, VOID*)
 				uint64_t l2Miss = L2 ? L2->Misses()   : 0;
 
 				// -------- print report --------
-				std::cerr << "\n[Report @ " << cur << " instructions]\n"
+				Out << "\n[Report @ " << cur << " instructions]\n"
 						<< "  L1 accesses : " << l1Acc
 						<< "\n  misses: "     << l1Miss
 						<< "\n  MPKI: "       << std::fixed << std::setprecision(2)
@@ -513,26 +519,26 @@ VOID Fini(INT32, VOID*)
 		}
 	}
 
-    std::cerr << std::dec << "\n=========== Cache-Sim Report ============\n";
-    std::cerr << "Total instructions       : " << totIns  << '\n';
-    std::cerr << "  memory instructions    : " << totMem  << '\n';
-    std::cerr << "    reads                : " << rd      << '\n';
-    std::cerr << "    writes               : " << wr      << "\n\n";
+    Out << std::dec << "\n=========== Cache-Sim Report ============\n";
+    Out << "Total instructions       : " << totIns  << '\n';
+    Out << "  memory instructions    : " << totMem  << '\n';
+    Out << "    reads                : " << rd      << '\n';
+    Out << "    writes               : " << wr      << "\n\n";
 
     uint64_t l1Acc=0,l1Miss=0;
     for(auto* c:L1){ l1Acc+=c->Accesses(); l1Miss+=c->Misses(); }
 
-    std::cerr << "L1 accesses              : "
+    Out << "L1 accesses              : "
               << l1Acc << "   misses: " << l1Miss
               << "   MPKI: " << std::fixed << std::setprecision(5)
               << (totIns? (1000.0*l1Miss)/totIns : 0.0) << '\n';
 
-    std::cerr << "L2 accesses              : " << L2->Accesses()
+    Out << "L2 accesses              : " << L2->Accesses()
               << "   misses: " << L2->Misses()
 			  << "   MPKI: " << std::fixed << std::setprecision(5)
 			  << (totIns? (1000.0*L2->Misses())/totIns : 0.0) << '\n';
 			  
-	std::cerr << "\n  Clist Accesses: " << clist_access     << " ("
+	Out << "\n  Clist Accesses: " << clist_access     << " ("
 		      << std::fixed << std::setprecision(5)
 			  << ((float)clist_access / (float)L2->Misses()) * 100.0 << "%)"
 			  << "\n  Unclist Accesses: " << unclist_access << " ("
@@ -542,7 +548,7 @@ VOID Fini(INT32, VOID*)
 			  << std::fixed << std::setprecision(5)
 			  << ((float)cpage_access / (float)L2->Misses()) * 100.0 << "%)"
 			  << std::endl;
-    std::cerr << "==========================================\n";
+    Out << "==========================================\n";
 
     delete L2;   // tidy
 	delete unclist;
@@ -555,7 +561,7 @@ VOID Fini(INT32, VOID*)
 int main(int argc, char* argv[])
 {
     if(PIN_Init(argc, argv)){
-        std::cerr << "Pin init failed\n";
+        Out << "Pin init failed\n";
         return 1;
     }
 
@@ -564,6 +570,7 @@ int main(int argc, char* argv[])
 	uint32_t clsize   	  = KnobCompressedListSize.Value();
 	unclist_freq		  = KnobPromoteUncompressedFrequency.Value();
 	clist_freq	  		  = KnobPromoteCompressedFrequency.Value();
+	Out.open(KnobOutfile.Value());
 	
 	// Initializing page doubly linked lists
 	clist   = new HASHLL::HashLL(clsize);
