@@ -11,6 +11,7 @@
 #include <atomic>
 #include <functional>
 #include <limits>
+#include <string>
 #include "hashll.h"
 
 using namespace HASHLL;
@@ -43,8 +44,8 @@ KNOB<UINT32> KnobPromoteCompressedFrequency
 KNOB<UINT32> KnobExpansionFrequency
 							(KNOB_MODE_WRITEONCE, "pintool", "exfreq",  "65536" ,
 							"Expansion frequency for promoting compressed page to uncompressed");
-KNOB<char* const> KnobOutfile
-							(KNOB_MODE_WRITEONCE, "pintool", "outfile",  "fini.out" ,
+KNOB<std::string> KnobOutfile
+							(KNOB_MODE_WRITEONCE, "pintool", "o",  "fini.out" ,
 							"Output location");
 
 // -----------------------------------------------------------------------
