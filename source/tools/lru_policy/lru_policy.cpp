@@ -55,7 +55,7 @@ enum { access_data=0, access_inst=1, access_page_table=2 };
 
 const uint64_t MAXVAL = std::numeric_limits<uint64_t>::max();
 
-constexpr uint64_t REPORT_INTERVAL = 100'000'000ULL;  // e.g. 1 billion
+constexpr uint64_t REPORT_INTERVAL = 1'000'000'000ULL;  // e.g. 1 billion
 constexpr uint64_t MAX_INTERVAL = MAXVAL;
 static std::atomic<uint64_t> globalIns{0};
 static std::atomic<uint64_t> lastReportIns{0};
