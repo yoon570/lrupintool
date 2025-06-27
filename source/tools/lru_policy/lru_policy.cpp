@@ -5,12 +5,15 @@
 #include <type_traits>
 #include <iostream>
 #include <iomanip>
+#include <fstream>
 #include <vector>
 #include <cstdint>
 #include <atomic>
 #include <functional>
 #include <limits>
+#include <string>
 #include "hashll.h"
+#include <chrono>
 
 using namespace HASHLL;
 
@@ -42,7 +45,9 @@ KNOB<UINT32> KnobPromoteCompressedFrequency
 KNOB<UINT32> KnobExpansionFrequency
 							(KNOB_MODE_WRITEONCE, "pintool", "exfreq",  "65536" ,
 							"Expansion frequency for promoting compressed page to uncompressed");
-
+KNOB<UINT64> KnobReportInterval
+							(KNOB_MODE_WRITEONCE, "pintool", "repival",  "10000000" , //10 mil by default
+							"Report interval in # of instructions");
 // -----------------------------------------------------------------------
 // Constants
 // -----------------------------------------------------------------------
@@ -53,10 +58,7 @@ enum { access_data=0, access_inst=1, access_page_table=2 };
 #define DATA_BLOCK_FLOOR_ADDR_MASK ~(static_cast<UINT64>(KnobBlkBytes.Value()-1))
 #define PAGE_SIZE				   4096
 
-const uint64_t MAXVAL = std::numeric_limits<uint64_t>::max();
 
-constexpr uint64_t REPORT_INTERVAL = 100'000'000ULL;  // e.g. 1 billion
-constexpr uint64_t MAX_INTERVAL = MAXVAL;
 static std::atomic<uint64_t> globalIns{0};
 static std::atomic<uint64_t> lastReportIns{0};
 static std::atomic<uint64_t> expansionFrequency{0};
@@ -187,6 +189,7 @@ uint64_t cpage_access	= 0;
 
 uint64_t clist_freq 	= 0;
 uint64_t unclist_freq	= 0;
+uint64_t report_interval= 0;
 
 struct StatPack { 
 	std::atomic<uint64_t> ins=0;
@@ -202,6 +205,25 @@ std::vector<std::unique_ptr<StatPack>> stats;
 VOID CacheCall(THREADID, UINT32, UINT64, UINT64, UINT64, UINT32, bool, int, UINT64);
 VOID RecordMemRead (VOID*, VOID*, UINT32, ADDRINT, ADDRINT, THREADID);
 VOID RecordMemWrite(VOID*, VOID*, UINT32, ADDRINT, ADDRINT, THREADID);
+
+static PIN_LOCK init_lock;
+
+static void EnsureThreadData(THREADID tid)
+{
+    // fast path – only if tid is already in-bounds
+    if (tid < stats.size() && stats[tid] && L1[tid])
+        return;
+
+    PIN_GetLock(&init_lock, 0);
+    if (tid >= stats.size()) {                 // make room if needed
+        stats.resize(tid + 1);
+        L1.resize(tid + 1, nullptr);
+    }
+    if (!L1[tid])      L1[tid]    = new SimpleCache(cfgL1);
+    if (!stats[tid])   stats[tid] = std::make_unique<StatPack>();
+    PIN_ReleaseLock(&init_lock);
+}
+
 
 // -----------------------------------------------------------------------
 // CacheCall cache access routine
@@ -259,14 +281,14 @@ VOID CacheCall(THREADID tid, UINT32 op, UINT64 /*icount*/, UINT64 /*pc*/,
 		PIN_ReleaseLock(&c_lock);
 
 		/*  Step 0 : lists are full –– do we swap? (promotion) */
-		PIN_GetLock(&unc_lock, tid+1);
-		PIN_GetLock(&c_lock,  tid+1);
 		if (uc_epoch >= expansionFrequency) {
+			PIN_GetLock(&unc_lock, tid+1);
+			PIN_GetLock(&c_lock,  tid+1);
 			clist->swap_with(*unclist);       // promotion
 			uc_epoch = 0;                     // both lists mutated
+			PIN_ReleaseLock(&c_lock);
+			PIN_ReleaseLock(&unc_lock);
 		}
-		PIN_ReleaseLock(&c_lock);
-		PIN_ReleaseLock(&unc_lock);
 
 		/*  Step 3 : page is already in unclist */
 		PIN_GetLock(&unc_lock, tid+1);
@@ -321,6 +343,7 @@ VOID CacheCall(THREADID tid, UINT32 op, UINT64 /*icount*/, UINT64 /*pc*/,
 VOID RecordMemRead(VOID* ip, VOID* addr, UINT32 stk,
                    ADDRINT rbp, ADDRINT rsp, THREADID tid)
 {
+	EnsureThreadData(tid);
 	++uc_epoch;
 	++cl_epoch;
 
@@ -336,6 +359,7 @@ VOID RecordMemRead(VOID* ip, VOID* addr, UINT32 stk,
 VOID RecordMemWrite(VOID* ip, VOID* addr, UINT32 stk,
                     ADDRINT rbp, ADDRINT rsp, THREADID tid)
 {
+	EnsureThreadData(tid);
 	++uc_epoch;
 	++cl_epoch;
 
@@ -348,12 +372,59 @@ VOID RecordMemWrite(VOID* ip, VOID* addr, UINT32 stk,
               stk, false, access_data, vp_addr);
 }
 
+VOID WriteFinalReport()
+{
+    uint64_t totIns = 0, totMem = 0, rd = 0, wr = 0;
+    for (auto& s : stats)
+    {
+        if (s)
+        {
+            totIns += s->ins.load(std::memory_order_relaxed);
+            totMem += s->memIns.load(std::memory_order_relaxed);
+            rd     += s->reads.load(std::memory_order_relaxed);
+            wr     += s->writes.load(std::memory_order_relaxed);
+        }
+    }
+
+    uint64_t l1Acc = 0, l1Miss = 0;
+    for (auto* c : L1) {
+        l1Acc  += c->Accesses();
+        l1Miss += c->Misses();
+    }
+
+	uint64_t l2Acc  = L2 ? L2->Accesses() : 0;
+	uint64_t l2Miss = L2 ? L2->Misses()   : 0;
+
+	std::cout << "\n[Report @ " << globalIns << " instructions]\n"
+					<< "L1 accesses: " << l1Acc
+					<< ", misses: "     << l1Miss
+					<< ", L2 accesses: " << l2Acc
+					<< ", misses: "     << l2Miss
+					<< "\nClist Accesses: " << clist_access << " ("
+					<< std::fixed << std::setprecision(5) 
+					<< ((float)clist_access / (float)L2->Misses()) * 100.0 << "%)"
+					<< ", Unclist Accesses: " << unclist_access << " ("
+					<< std::fixed << std::setprecision(5)
+					<< ((float)unclist_access / (float)L2->Misses()) * 100.0 << "%)"
+					<< ", Cpage Accesses: " << cpage_access << " ("
+					<< std::fixed << std::setprecision(5)
+					<< ((float)cpage_access / (float)L2->Misses()) * 100.0 << "%)";
+
+	std::cout << std::dec << "\n=========== PROGRAM FINISHED ============\n";
+
+    delete L2;
+    delete unclist;
+    delete clist;
+}
+
+
 // -----------------------------------------------------------------------
 // Instrumentation functions
 // -----------------------------------------------------------------------
 VOID Instruction(INS ins, VOID*)
 {
     UINT32 stkStatus = 0;                 // could refine with REG_RSP vs REG_RBP
+
 
     if(INS_IsMemoryRead(ins))
         INS_InsertPredicatedCall(ins, IPOINT_BEFORE, (AFUNPTR)RecordMemRead,
@@ -368,16 +439,18 @@ VOID Instruction(INS ins, VOID*)
             IARG_THREAD_ID, IARG_END);
 
     INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)+[](THREADID tid){
-    stats[tid]->ins.fetch_add(1, std::memory_order_relaxed);
+		EnsureThreadData(tid);
+   		stats[tid]->ins.fetch_add(1, std::memory_order_relaxed);
 		uint64_t cur = ++globalIns;                        // total instructions
-		if ((cur - lastReportIns.load(std::memory_order_relaxed)) > MAX_INTERVAL)
+		uint64_t expected = lastReportIns.load(std::memory_order_relaxed);
+		if ((cur - expected) > report_interval)
 		{
 			// let **one** thread do the report
-			if (lastReportIns.compare_exchange_strong(cur, cur))
+			if (lastReportIns.compare_exchange_strong(expected, cur))
 			{
 				/* 
 					Maybe locking is needed here? At the very least check
-					In any case, this is where we will also flush out all
+					In any case, this is where we will also flush std::cout all
 					counters for both clist and unclist accesses.
 					LRU order is preserved, we just want to record and 
 					prevent an integer overflow. 
@@ -397,18 +470,20 @@ VOID Instruction(INS ins, VOID*)
 				uint64_t l2Miss = L2 ? L2->Misses()   : 0;
 
 				// -------- print report --------
-				std::cerr << "\n[Report @ " << cur << " instructions]\n"
-						<< "  L1 accesses : " << l1Acc
-						<< "\n  misses: "     << l1Miss
-						<< "\n  MPKI: "       << std::fixed << std::setprecision(2)
-						<< (cur ? 1000.0 * l1Miss / cur : 0.0) << '\n'
-						<< "  L2 accesses : " << l2Acc
-						<< "\n  misses: "     << l2Miss
-						<< "\n  MPKI: "       << std::fixed << std::setprecision(2)
-						<< (cur ? 1000.0 * l2Miss / cur : 0.0) << "\n"
-						<< "\n  Clist Accesses: " << clist_access
-						<< "\n  Unclist Accesses: " << unclist_access
-						<< "\n  Cpage   Accesses: " << cpage_access;
+				std::cout << "\n[Report @ " << cur << " instructions]\n"
+						<< "L1 accesses: " << l1Acc
+						<< ", misses: "     << l1Miss
+						<< ", L2 accesses : " << l2Acc
+						<< ", misses: "     << l2Miss
+						<< "\nClist Accesses: " << clist_access << " ("
+						<< std::fixed << std::setprecision(5) 
+        				<< ((float)clist_access / (float)L2->Misses()) * 100.0 << "%)"
+						<< ", Unclist Accesses: " << unclist_access << " ("
+						<< std::fixed << std::setprecision(5)
+        				<< ((float)unclist_access / (float)L2->Misses()) * 100.0 << "%)"
+						<< ", Cpage Accesses: " << cpage_access << " ("
+						<< std::fixed << std::setprecision(5)
+        				<< ((float)cpage_access / (float)L2->Misses()) * 100.0 << "%)";
 
 				// Statistics reset occurs here:
 				PIN_GetLock(&reset_lock, tid+1);
@@ -442,36 +517,6 @@ VOID Instruction(INS ins, VOID*)
 				PIN_ReleaseLock(&reset_lock);
 			}
 		}
-		else if ((cur - lastReportIns.load(std::memory_order_relaxed)) > REPORT_INTERVAL)
-		{
-			// let **one** thread do the report
-			if (lastReportIns.compare_exchange_strong(cur, cur))
-			{
-				// -------- aggregate L1 --------
-				uint64_t l1Acc = 0, l1Miss = 0;
-				for (auto* c : L1) {
-					if (c) { l1Acc += c->Accesses(); l1Miss += c->Misses(); }
-				}
-
-				// -------- aggregate L2 --------
-				uint64_t l2Acc  = L2 ? L2->Accesses() : 0;
-				uint64_t l2Miss = L2 ? L2->Misses()   : 0;
-
-				// -------- print report --------
-				std::cerr << "\n[Report @ " << cur << " instructions]\n"
-						<< "  L1 accesses : " << l1Acc
-						<< "\n  misses: "     << l1Miss
-						<< "\n  MPKI: "       << std::fixed << std::setprecision(2)
-						<< (cur ? 1000.0 * l1Miss / cur : 0.0) << '\n'
-						<< "  L2 accesses : " << l2Acc
-						<< "\n  misses: "     << l2Miss
-						<< "\n  MPKI: "       << std::fixed << std::setprecision(2)
-						<< (cur ? 1000.0 * l2Miss / cur : 0.0) << "\n"
-						<< "\n  Clist Accesses: " << clist_access
-						<< "\n  Unclist Accesses: " << unclist_access
-						<< "\n  Cpage   Accesses: " << cpage_access;
-			}
-		}
 	}, IARG_THREAD_ID, IARG_END);
 }
 
@@ -482,13 +527,14 @@ VOID ThreadStart(THREADID tid, CONTEXT*, INT32, VOID*)
 {
     if (tid >= L1.size()) {
         L1.resize(tid+1, nullptr);
-        stats.resize(tid+1);  // now this makes each stats[tid] == nullptr
+        stats.resize(tid+1);
     }
     L1[tid] = new SimpleCache(cfgL1);
-
-    // allocate a new StatPack for this thread
-    stats[tid] = std::make_unique<StatPack>();
+    
+    if (!stats[tid])
+        stats[tid] = std::make_unique<StatPack>();
 }
+
 
 
 VOID ThreadFini(THREADID tid, const CONTEXT*, INT32, VOID*)
@@ -501,52 +547,7 @@ VOID ThreadFini(THREADID tid, const CONTEXT*, INT32, VOID*)
 // -----------------------------------------------------------------------
 VOID Fini(INT32, VOID*)
 {
-    uint64_t totIns=0, totMem=0, rd=0, wr=0;
-    for(auto& s:stats)
-	{ 
-		if (s)
-		{
-			totIns	+= s->ins	.load(std::memory_order_relaxed);
-			totMem	+= s->memIns.load(std::memory_order_relaxed);
-			rd		+= s->reads	.load(std::memory_order_relaxed);
-			wr		+= s->writes.load(std::memory_order_relaxed);
-		}
-	}
-
-    std::cerr << std::dec << "\n=========== Cache-Sim Report ============\n";
-    std::cerr << "Total instructions       : " << totIns  << '\n';
-    std::cerr << "  memory instructions    : " << totMem  << '\n';
-    std::cerr << "    reads                : " << rd      << '\n';
-    std::cerr << "    writes               : " << wr      << "\n\n";
-
-    uint64_t l1Acc=0,l1Miss=0;
-    for(auto* c:L1){ l1Acc+=c->Accesses(); l1Miss+=c->Misses(); }
-
-    std::cerr << "L1 accesses              : "
-              << l1Acc << "   misses: " << l1Miss
-              << "   MPKI: " << std::fixed << std::setprecision(5)
-              << (totIns? (1000.0*l1Miss)/totIns : 0.0) << '\n';
-
-    std::cerr << "L2 accesses              : " << L2->Accesses()
-              << "   misses: " << L2->Misses()
-			  << "   MPKI: " << std::fixed << std::setprecision(5)
-			  << (totIns? (1000.0*L2->Misses())/totIns : 0.0) << '\n';
-			  
-	std::cerr << "\n  Clist Accesses: " << clist_access     << " ("
-		      << std::fixed << std::setprecision(5)
-			  << ((float)clist_access / (float)L2->Misses()) * 100.0 << "%)"
-			  << "\n  Unclist Accesses: " << unclist_access << " ("
-			  << std::fixed << std::setprecision(5)
-			  << ((float)unclist_access / (float)L2->Misses()) * 100.0 << "%)"
-		      << "\n  Cpage   Accesses: " << cpage_access   << " ("
-			  << std::fixed << std::setprecision(5)
-			  << ((float)cpage_access / (float)L2->Misses()) * 100.0 << "%)"
-			  << std::endl;
-    std::cerr << "==========================================\n";
-
-    delete L2;   // tidy
-	delete unclist;
-	delete clist;
+    WriteFinalReport();
 }
 
 // -----------------------------------------------------------------------
@@ -554,8 +555,9 @@ VOID Fini(INT32, VOID*)
 // -----------------------------------------------------------------------
 int main(int argc, char* argv[])
 {
-    if(PIN_Init(argc, argv)){
-        std::cerr << "Pin init failed\n";
+
+	if(PIN_Init(argc, argv)){
+        std::cout << "Pin init failed\n";
         return 1;
     }
 
@@ -564,6 +566,7 @@ int main(int argc, char* argv[])
 	uint32_t clsize   	  = KnobCompressedListSize.Value();
 	unclist_freq		  = KnobPromoteUncompressedFrequency.Value();
 	clist_freq	  		  = KnobPromoteCompressedFrequency.Value();
+	report_interval       = KnobReportInterval.Value();
 	
 	// Initializing page doubly linked lists
 	clist   = new HASHLL::HashLL(clsize);
@@ -585,6 +588,8 @@ int main(int argc, char* argv[])
 	PIN_InitLock(&unc_lock);
 	PIN_InitLock(&c_lock);
 	PIN_InitLock(&cpage_lock);
+	PIN_InitLock(&init_lock);
+
 
     INS_AddInstrumentFunction(Instruction,  nullptr);
     PIN_AddThreadStartFunction(ThreadStart, nullptr);
