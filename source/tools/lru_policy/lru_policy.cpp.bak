@@ -49,7 +49,7 @@ KNOB<UINT64> KnobReportInterval
 // Constants
 // -----------------------------------------------------------------------
 enum : UINT32 { READ_OP = 0, WRITE_OP = 1 };
-enum { access_data=0};
+enum { access_data=0, access_inst=1, access_page_table=2 };
 
 #define CACHELINE_OFFSET           0
 #define DATA_BLOCK_FLOOR_ADDR_MASK ~(static_cast<UINT64>(KnobBlkBytes.Value()-1))
@@ -61,12 +61,6 @@ static std::atomic<uint64_t> lastReportIns{0};
 static std::atomic<uint64_t> expansionFrequency{0};
 static std::atomic<uint64_t> uc_epoch{0};   // since last unclist *mutation*
 static std::atomic<uint64_t> cl_epoch{0};   // since last clist  *mutation*
-static std::atomic<uint64_t> ex_epoch{0};
-
-// At top of file, near other atomics
-static std::atomic<uint64_t> L1AccTot   {0}, L1MissTot   {0};
-static std::atomic<uint64_t> L2AccTot   {0}, L2MissTot   {0};
-static std::atomic<uint64_t> ClistTot   {0}, UnclistTot  {0}, CpageTot {0};
 
 HashLL * clist = nullptr;
 HashLL * unclist = nullptr;
@@ -285,11 +279,11 @@ VOID CacheCall(THREADID tid, UINT32 op, UINT64 /*icount*/, UINT64 /*pc*/,
 		PIN_ReleaseLock(&c_lock);
 
 		/*  Step 0 : lists are full –– do we swap? (promotion) */
-		if (ex_epoch >= expansionFrequency) {
+		if (uc_epoch >= expansionFrequency) {
 			PIN_GetLock(&unc_lock, tid+1);
 			PIN_GetLock(&c_lock,  tid+1);
 			clist->swap_with(*unclist);       // promotion
-			ex_epoch = 0;                     // both lists mutated
+			uc_epoch = 0;                     // both lists mutated
 			PIN_ReleaseLock(&c_lock);
 			PIN_ReleaseLock(&unc_lock);
 		}
@@ -348,7 +342,6 @@ VOID RecordMemRead(VOID* ip, VOID* addr, UINT32 stk,
 	EnsureThreadData(tid);
 	++uc_epoch;
 	++cl_epoch;
-	++ex_epoch;
 
     (void)ip; (void)rbp; (void)rsp; (void)stk;
     stats[tid]->memIns.fetch_add(1, std::memory_order_relaxed);
@@ -365,7 +358,6 @@ VOID RecordMemWrite(VOID* ip, VOID* addr, UINT32 stk,
 	EnsureThreadData(tid);
 	++uc_epoch;
 	++cl_epoch;
-	++ex_epoch;
 
     (void)ip; (void)rbp; (void)rsp; (void)stk;
     stats[tid]->memIns.fetch_add(1, std::memory_order_relaxed);
@@ -378,19 +370,28 @@ VOID RecordMemWrite(VOID* ip, VOID* addr, UINT32 stk,
 
 VOID WriteFinalReport()
 {
-	uint64_t l1Acc = 0, l1Miss = 0;
-    for (auto* c : L1) if (c) { l1Acc += c->Accesses(); l1Miss += c->Misses(); }
-    L1AccTot  += l1Acc;
-    L1MissTot += l1Miss;
+    uint64_t totIns = 0, totMem = 0, rd = 0, wr = 0;
+    for (auto& s : stats)
+    {
+        if (s)
+        {
+            totIns += s->ins.load(std::memory_order_relaxed);
+            totMem += s->memIns.load(std::memory_order_relaxed);
+            rd     += s->reads.load(std::memory_order_relaxed);
+            wr     += s->writes.load(std::memory_order_relaxed);
+        }
+    }
 
-    uint64_t l2Acc  = L2 ? L2->Accesses() : 0;
-    uint64_t l2Miss = L2 ? L2->Misses()   : 0;
-    L2AccTot  += l2Acc;
-    L2MissTot += l2Miss;
+    uint64_t l1Acc = 0, l1Miss = 0;
+    for (auto* c : L1) {
+		if (!c)
+			continue;
+        l1Acc  += c->Accesses();
+        l1Miss += c->Misses();
+    }
 
-    ClistTot   += clist_access.load();
-    UnclistTot += unclist_access.load();
-    CpageTot   += cpage_access.load();
+	uint64_t l2Acc  = L2 ? L2->Accesses() : 0;
+	uint64_t l2Miss = L2 ? L2->Misses()   : 0;
 
 	std::cout << "\n[Report @ " << globalIns << " instructions]\n"
 					<< "L1 accesses: " << l1Acc
@@ -463,21 +464,9 @@ VOID Instruction(INS ins, VOID*)
 					if (c) { l1Acc += c->Accesses(); l1Miss += c->Misses(); }
 				}
 
-
 				// -------- aggregate L2 --------
 				uint64_t l2Acc  = L2 ? L2->Accesses() : 0;
 				uint64_t l2Miss = L2 ? L2->Misses()   : 0;
-
-				// ----- accumulate grand-totals -----
-				L1AccTot   += l1Acc;
-				L1MissTot  += l1Miss;
-				L2AccTot   += l2Acc;
-				L2MissTot  += l2Miss;
-
-				ClistTot   += clist_access.load();
-				UnclistTot += unclist_access.load();
-				CpageTot   += cpage_access.load();
-
 
 				// -------- print report --------
 				std::cout << "\n[Report @ " << cur << " instructions]\n"
@@ -494,7 +483,6 @@ VOID Instruction(INS ins, VOID*)
 						<< ", Cpage Accesses: " << cpage_access << " ("
 						<< std::fixed << std::setprecision(5)
         				<< ((double)cpage_access / (double)L2->Misses()) * 100.0 << "%)";
-						
 
 				// Statistics reset occurs here:
 				for (auto * c : L1)

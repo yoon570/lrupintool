@@ -295,35 +295,31 @@ public:
     }
 
     // -------------------------------------------------------------------
-    // Exchange hottest in *this* (compressed) with LRU in *other*
-    // – but keep only the hot node: it is promoted into `other`, while
-    // the cold node is discarded.
+    // Exchange a “hottest” node from this list with the LRU of another.
+    // - candidate = hottest in *this* (compressed)
+    // - victim    = LRU in other  (uncompressed)
+    // After swap:
+    //   candidate goes MRU into other
+    //   victim    goes LRU into this
     // -------------------------------------------------------------------
     void swap_with(HashLL& other)
     {
-        hash_node* hot  = hottest_node();   // candidate from *this*
-        if (!hot) return;                   // nothing to promote
+        hash_node* hot  = hottest_node();   // from *this*  (clist)
+        hash_node* cold = other.lru_node(); // from other   (unclist)
+        if (!hot || !cold) return;
 
-        // 1. Detach HOT from *this* ------------------------------------------------
-        unlink_node(hot);
+        // --- detach from their original owners ---
+        unlink_node(hot);                         // correct: *this*
         table.erase(hot->vp_num);
-        --size;                 // insert_mru_node() will bump other.size later
+        --size;
 
-        // 2. Identify & detach COLD from other -------------------------------------
-        hash_node* cold = other.lru_node();
-        if (cold) {
-            other.unlink_node(cold);
-            other.table.erase(cold->vp_num);
-            --other.size;       // will *not* be replaced
-        }
+        other.unlink_node(cold);                  // <-- FIX: use *other*
+        other.table.erase(cold->vp_num);
+        --other.size;
 
-        // 3. Promote HOT into other (MRU) ------------------------------------------
-        other.insert_mru_node(hot);         // adds +1 to other.size internally
-
-        // 4. Destroy COLD (if any) -------------------------------------------------
-        if (cold) {
-             delete cold;                    // or return to your own freelist
-        }
+        // --- splice into the opposite lists ---
+        other.insert_mru_node(hot);               // hot → unclist (MRU)
+        insert_lru_node(cold);                    // cold → clist  (LRU)
     }
 
 
@@ -370,111 +366,6 @@ private:
 
     // Hash map: vp_num → pointer to the node in the LRU list
     std::unordered_map<uint64_t, hash_node*> table;
-};
-
-} // namespace HASHLL
-
-#endif /* HASHLL_H */
-
-// -----------------------------------------------------------------------
-// This section is for policy management for the LRU lists. Each class will
-// eventually be able to support multiple policies.
-// -----------------------------------------------------------------------
-class Policy
-{
-    enum POLICY_T {TMCC, LRU, MITHRIL};
-    enum POLICY_CODE {NOTFOUND, NOTEPOCH, INCREMENTCOUNT, PROMOTED, EXPANDED};
-
-    public:
-
-        explicit Policy(uint32_t ufreq, uint32_t efreq, uint32_t cfreq, uint32_t csize, uint32_t usize, POLICY_T pol)
-        {
-            c_list  = new HashLL(csize);
-            uc_list = new HashLL(usize);
-            uf = ufreq;
-            ef = efreq;
-            cf = cfreq;
-            policy = pol;
-            c_list_accesses  = 0;
-            uc_list_accesses = 0;
-        }
-        // All the methods should be here
-        // Just adapt them from lru_policy.cpp
-        /* This is for ufreq */
-        POLICY_CODE promotion(uint64_t vp_addr, uint64_t epoch)
-        {
-            auto victim = uc_list->find_node(vp_addr);
-            if (victim) {
-                if (epoch >= uf) {
-                    uc_list->touch(vp_addr);      // refresh order
-                    return PROMOTED;
-                } else {
-                    uc_list->increment_count(vp_addr);
-                    return INCREMENTCOUNT;
-                }
-            }
-            return NOTFOUND;
-        }
-
-        /* This is for efreq */
-        POLICY_CODE expansion(uint64_t vp_addr, uint64_t epoch)
-        {
-            if (epoch < ef) return NOTEPOCH;
-            c_list->swap_with(*uc_list);
-            return EXPANDED;
-        }
-
-        /* This is for cfreq */
-        POLICY_CODE update_clist(uint64_t vp_addr, uint64_t epoch)
-        {
-            if (epoch < cf)
-            {
-                c_list->increment_count(vp_addr);
-                return INCREMENTCOUNT;
-            } else
-            {
-                c_list->touch(vp_addr);
-                return PROMOTED;
-            }
-        }
-
-        POLICY_CODE count_uclist(uint64_t vp_addr)
-        {
-
-        }
-
-        POLICY_CODE count_clist(uint64_t vp_addr, uint64_t epoch)
-        {
-
-        }
-
-        /* Initial spinup, on every instruction? */
-        char fill_list(uint64_t vp_addr)
-        {
-            if (!uc_list->isFull()) {
-                uc_list->touch(vp_addr);
-                ++uc_list_accesses;
-                return 0;
-            }
-            else if (!c_list->isFull()) {
-                c_list->touch(vp_addr);
-                ++c_list_accesses;
-                return 1;
-            }
-            return 2;
-        }
-
-    private:
-    // Private members go here
-        uint32_t uf;
-        uint32_t ef;
-        uint32_t cf;
-        uint32_t csz;
-        uint64_t uc_list_accesses;
-        uint64_t c_list_accesses;
-        HashLL * c_list;
-        HashLL * uc_list;
-        POLICY_T policy;
 };
 
 } // namespace HASHLL

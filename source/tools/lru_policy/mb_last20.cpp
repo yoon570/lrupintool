@@ -2,9 +2,13 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <unistd.h>
+#include <inttypes.h>
 
 #define PAGE_SIZE         4096
-#define PROGRESS_STEP_PCT 20          /* print bar every 20 % */
+#define PROGRESS_STEP_PCT 20  /* print bar every 20 % */
+
+/* number of distinct offsets to touch _within_ each page */
+static const int SPATIAL_DEGREE = 8;
 
 static inline void touch_addr(volatile char *p)
 {
@@ -15,8 +19,7 @@ static inline void touch_addr(volatile char *p)
 int main(int argc, char **argv)
 {
     if (argc != 3) {
-        fprintf(stderr, "Usage: %s <RSS_in_pages> <total_iterations>\n",
-                argv[0]);
+        fprintf(stderr, "Usage: %s <RSS_in_pages> <total_iterations>\n", argv[0]);
         return 1;
     }
 
@@ -27,58 +30,63 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    /* ------------ split pages: 20 % hot, 80 % cold ----------------------- */
-    long hot_pages  = (rss_pages * 20) / 100;   /* last 20 % of pages  */
+    /* split pages: 20% hot, 80% cold */
+    long hot_pages  = (rss_pages * 20) / 100;
     if (hot_pages < 1)      hot_pages = 1;
     if (hot_pages > rss_pages) hot_pages = rss_pages;
-    long cold_pages = rss_pages - hot_pages;    /* first 80 % of pages */
-    long hot_start  = cold_pages;               /* first index of hot set */
+    long cold_pages = rss_pages - hot_pages;
+    long hot_start  = cold_pages;
 
-    /* ------------ allocate ------------------------------------------------ */
+    /* allocate entire region */
     size_t region_sz = (size_t)rss_pages * PAGE_SIZE;
-    volatile char *region = (volatile char *)malloc(region_sz);
+    volatile char *region = (volatile char*)malloc(region_sz);
     if (!region) { perror("malloc"); return 1; }
 
-    /* Phase 0: fault-in all pages once */
-    for (long i = 0; i < rss_pages; ++i)
+    /* Phase 0: fault in every page once */
+    for (long i = 0; i < rss_pages; ++i) {
+        /* touch the first byte of each page to fault it in */
         touch_addr(region + i * PAGE_SIZE);
+    }
 
-    /* Phase 1: 80 % iterations → hot-set, 20 % → cold-set */
     long hot_iters  = (total_iters * 80) / 100;
     long cold_iters = total_iters - hot_iters;
-
     int last_pct = -1;
 
-    /* STEP 1 */
-    /* ---- first 80 %: hammer last 20 % of pages -------------------------- */
+    /* helper to touch SPATIAL_DEGREE offsets in one page */
+    auto hammer_page = [&](long pg) {
+        size_t base = (size_t)pg * PAGE_SIZE;
+        for (int s = 0; s < SPATIAL_DEGREE; ++s) {
+            /* evenly spaced offsets within the page */
+            size_t offset = (PAGE_SIZE * s) / SPATIAL_DEGREE;
+            touch_addr(region + base + offset);
+        }
+    };
+
+    /* STEP 1: hammer hot pages */
     for (long i = 0; i < hot_iters; ++i) {
-        long page = hot_start + (i % hot_pages);         /* wrap inside hot set */
-        touch_addr(region + page * PAGE_SIZE);
+        long page = hot_start + (i % hot_pages);
+        hammer_page(page);
 
         int pct = (int)(((i + 1) * 100) / total_iters);
-        if (pct / PROGRESS_STEP_PCT != last_pct &&
-            pct % PROGRESS_STEP_PCT == 0) {
+        if (pct / PROGRESS_STEP_PCT != last_pct && pct % PROGRESS_STEP_PCT == 0) {
             last_pct = pct / PROGRESS_STEP_PCT;
             printf("%d%% ", pct); fflush(stdout);
         }
     }
 
-    /* STEP 2 */
-    /* ---- final 20 %: touch first 80 % of pages -------------------------- */
+    /* STEP 2: hammer cold pages */
     for (long i = 0; i < cold_iters; ++i) {
-        long page = (i % cold_pages);                      /* wrap inside cold set */
-        touch_addr(region + page * PAGE_SIZE);
+        long page = (i % cold_pages);
+        hammer_page(page);
 
         int pct = (int)(((hot_iters + i + 1) * 100) / total_iters);
-        if (pct / PROGRESS_STEP_PCT != last_pct &&
-            pct % PROGRESS_STEP_PCT == 0) {
+        if (pct / PROGRESS_STEP_PCT != last_pct && pct % PROGRESS_STEP_PCT == 0) {
             last_pct = pct / PROGRESS_STEP_PCT;
             printf("%d%% ", pct); fflush(stdout);
         }
     }
 
     putchar('\n');
-    free((void *)region);
+    free((void*)region);
     return 0;
 }
-
