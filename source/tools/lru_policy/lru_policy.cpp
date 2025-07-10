@@ -264,27 +264,16 @@ VOID CacheCall(THREADID tid, UINT32 op, UINT64 /*icount*/, UINT64 /*pc*/,
 		If it is in neither, it is a compressed page *outside* LRU
 		Eviction is needed for the compressed list, use knob for clist for frequency
  	*/		
-
 		PIN_GetLock(&unc_lock, tid+1);
-		if (!unclist->isFull()) {
-			unclist->touch(vp_addr);          // insert as MRU
-			++unclist_access;
-			PIN_ReleaseLock(&unc_lock);
-			return;
-		}
+		bool inUnc = (unclist->find_node(vp_addr) != nullptr);
+		bool unclFull = unclist->isFull();
 		PIN_ReleaseLock(&unc_lock);
 
-		/*  Step 2 : insert into clist if it still has room */
 		PIN_GetLock(&c_lock, tid+1);
-		if (!clist->isFull()) {
-			clist->touch(vp_addr);            // insert / move to MRU
-			++clist_access;
-			PIN_ReleaseLock(&c_lock);
-			return;
-		}
+		bool inCl  = (clist ->find_node(vp_addr) != nullptr);
+		bool clFull = clist->isFull();
 		PIN_ReleaseLock(&c_lock);
 
-		/*  Step 0 : lists are full –– do we swap? (promotion) */
 		if (ex_epoch >= expansionFrequency) {
 			PIN_GetLock(&unc_lock, tid+1);
 			PIN_GetLock(&c_lock,  tid+1);
@@ -294,11 +283,25 @@ VOID CacheCall(THREADID tid, UINT32 op, UINT64 /*icount*/, UINT64 /*pc*/,
 			PIN_ReleaseLock(&unc_lock);
 		}
 
+		// 1) Try to fill unclist
+		if (!inUnc && !unclFull) {
+			PIN_GetLock(&unc_lock, tid+1);
+			unclist->touch(vp_addr);
+			++uc_epoch;
+			PIN_ReleaseLock(&unc_lock);
+		}
+		else if (!inCl && !clFull) {
+			// 2) Try to fill clist (only if unclist branch did NOT run)
+			PIN_GetLock(&c_lock, tid+1);
+			clist->touch(vp_addr);
+			PIN_ReleaseLock(&c_lock);
+		}
 		/*  Step 3 : page is already in unclist */
 		PIN_GetLock(&unc_lock, tid+1);
 		auto victim = unclist->find_node(vp_addr);
 		if (victim) {
 			++unclist_access;
+			++uc_epoch;
 			if (uc_epoch >= unclist_freq) {
 				unclist->touch(vp_addr);      // refresh order
 				uc_epoch = 0;
@@ -309,18 +312,16 @@ VOID CacheCall(THREADID tid, UINT32 op, UINT64 /*icount*/, UINT64 /*pc*/,
 			return;
 		}
 		PIN_ReleaseLock(&unc_lock);
+		++cl_epoch;
+		++ex_epoch;
 
 		/*  Step 4 : page is already in clist, or try to insert/refresh there */
 		PIN_GetLock(&c_lock, tid+1);
 		victim = clist->find_node(vp_addr);
 		if (victim) {
 			++clist_access;
-			if (cl_epoch >= clist_freq) {
-				clist->touch(vp_addr);        // refresh / move to MRU
-				cl_epoch = 0;
-			} else {
-				clist->increment_count(vp_addr);
-			}
+
+			clist->touch(vp_addr);        // refresh / move to MRU
 			PIN_ReleaseLock(&c_lock);
 			return;
 		} else if (cl_epoch >= clist_freq) {         // insert new page, evicting LRU
@@ -346,10 +347,6 @@ VOID RecordMemRead(VOID* ip, VOID* addr, UINT32 stk,
                    ADDRINT rbp, ADDRINT rsp, THREADID tid)
 {
 	EnsureThreadData(tid);
-	++uc_epoch;
-	++cl_epoch;
-	++ex_epoch;
-
     (void)ip; (void)rbp; (void)rsp; (void)stk;
     stats[tid]->memIns.fetch_add(1, std::memory_order_relaxed);
 	stats[tid]->reads.fetch_add(1, std::memory_order_relaxed);
@@ -363,10 +360,6 @@ VOID RecordMemWrite(VOID* ip, VOID* addr, UINT32 stk,
                     ADDRINT rbp, ADDRINT rsp, THREADID tid)
 {
 	EnsureThreadData(tid);
-	++uc_epoch;
-	++cl_epoch;
-	++ex_epoch;
-
     (void)ip; (void)rbp; (void)rsp; (void)stk;
     stats[tid]->memIns.fetch_add(1, std::memory_order_relaxed);
 	stats[tid]->writes.fetch_add(1, std::memory_order_relaxed);
@@ -392,7 +385,7 @@ VOID WriteFinalReport()
     UnclistTot += unclist_access.load();
     CpageTot   += cpage_access.load();
 
-	std::cout << "\n[Report @ " << globalIns << " instructions]\n"
+	std::cout << "\n[FINAL REPORT @ " << globalIns << " instructions]\n"
 					<< "L1 accesses: " << l1Acc
 					<< ", misses: "     << l1Miss
 					<< ", L2 accesses: " << l2Acc
@@ -606,7 +599,6 @@ int main(int argc, char* argv[])
 	PIN_InitLock(&c_lock);
 	PIN_InitLock(&cpage_lock);
 	PIN_InitLock(&init_lock);
-
 
     INS_AddInstrumentFunction(Instruction,  nullptr);
     PIN_AddThreadStartFunction(ThreadStart, nullptr);
