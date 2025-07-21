@@ -67,11 +67,6 @@ int main(int argc, char **argv) {
     for (long iter = 0; iter < total_iters; ++iter) {
         auto now = std::chrono::steady_clock::now();
         auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now-start);
-        if (!gcDone && elapsed.count() >= 10)
-        {
-            std::cerr << "\nGraph construction finished.\n";
-            gcDone = true;
-        }
         long page = iter % rss_pages;
         touch_addr(region + (page * PAGE_SIZE));
 

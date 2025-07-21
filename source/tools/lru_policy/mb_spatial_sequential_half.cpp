@@ -31,7 +31,7 @@ int main(int argc, char **argv)
     }
 
     /* split pages: 20% hot, 80% cold */
-    long hot_pages  = (rss_pages * 20) / 100;
+    long hot_pages  = (rss_pages * 50) / 100;
     if (hot_pages < 1)      hot_pages = 1;
     if (hot_pages > rss_pages) hot_pages = rss_pages;
     long cold_pages = rss_pages - hot_pages;
@@ -48,9 +48,24 @@ int main(int argc, char **argv)
         touch_addr(region + i * PAGE_SIZE);
     }
 
-    long hot_iters  = (total_iters * 80) / 100;
+    long hot_iters  = (total_iters * 50) / 100;
     long cold_iters = total_iters - hot_iters;
-    int last_pct = -1;
+
+    /* --------------------------------------------------------------------
+     * Progress-bar helpers
+     * ------------------------------------------------------------------ */
+    long done = 0;           /* how many iterations we have completed */
+    int  last_step = -1;     /* last PROGRESS_STEP_PCT bucket printed */
+
+    auto show_progress = [&]() {
+        int pct = (int)((done * 100) / total_iters);
+        int step = pct / PROGRESS_STEP_PCT;
+        if (step != last_step && pct % PROGRESS_STEP_PCT == 0) {
+            last_step = step;
+            printf("%d%% ", pct);
+            fflush(stdout);
+        }
+    };
 
     /* helper to touch SPATIAL_DEGREE offsets in one page */
     auto hammer_page = [&](long pg) {
@@ -62,28 +77,24 @@ int main(int argc, char **argv)
         }
     };
 
-    /* STEP 1: hammer hot pages */
-    for (long i = 0; i < hot_iters; ++i) {
-        long page = hot_start + (i % hot_pages);
-        hammer_page(page);
-
-        int pct = (int)(((i + 1) * 100) / total_iters);
-        if (pct / PROGRESS_STEP_PCT != last_pct && pct % PROGRESS_STEP_PCT == 0) {
-            last_pct = pct / PROGRESS_STEP_PCT;
-            printf("%d%% ", pct); fflush(stdout);
-        }
-    }
-
-    /* STEP 2: hammer cold pages */
+    /* --------------------------------------------------------------------
+     * 1) Hammer COLD pages (remaining 20 %)
+     * ------------------------------------------------------------------ */
     for (long i = 0; i < cold_iters; ++i) {
         long page = (i % cold_pages);
         hammer_page(page);
+        ++done;
+        show_progress();
+    }
 
-        int pct = (int)(((hot_iters + i + 1) * 100) / total_iters);
-        if (pct / PROGRESS_STEP_PCT != last_pct && pct % PROGRESS_STEP_PCT == 0) {
-            last_pct = pct / PROGRESS_STEP_PCT;
-            printf("%d%% ", pct); fflush(stdout);
-        }
+    /* --------------------------------------------------------------------
+     * 2) Hammer HOT pages first (80 % of accesses)
+     * ------------------------------------------------------------------ */
+    for (long i = 0; i < hot_iters; ++i) {
+        long page = hot_start + (i % hot_pages);
+        hammer_page(page);
+        ++done;
+        show_progress();
     }
 
     putchar('\n');

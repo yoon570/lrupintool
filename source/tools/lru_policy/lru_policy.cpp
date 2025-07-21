@@ -17,11 +17,11 @@ using namespace HASHLL;
 // -----------------------------------------------------------------------
 // Knobs for Pintool, parameter sweep
 // -----------------------------------------------------------------------
-KNOB<UINT64> KnobL1Size   	(KNOB_MODE_WRITEONCE, "pintool", "l1size",  "32768",
-                            "L1 size (bytes)");
+KNOB<UINT64> KnobL1Size   	(KNOB_MODE_WRITEONCE, "pintool", "l1size",  "32768", // match the L1 cache size in the TMCC paper for actual experimental runs
+                            "L1 size (bytes)"); // Size of L2 in the processor, private cache hits which allows for parallelization
 KNOB<UINT32> KnobL1Assoc  	(KNOB_MODE_WRITEONCE, "pintool", "l1assoc", "8",
                             "L1 associativity");
-KNOB<UINT64> KnobL2Size   	(KNOB_MODE_WRITEONCE, "pintool", "l2size",  "262144",
+KNOB<UINT64> KnobL2Size   	(KNOB_MODE_WRITEONCE, "pintool", "l2size",  "262144", // match the L3 cache size in the TMCC paper for actual experimental runs
                             "L2 size (bytes)");
 KNOB<UINT32> KnobL2Assoc  	(KNOB_MODE_WRITEONCE, "pintool", "l2assoc", "8",
                             "L2 associativity");
@@ -67,6 +67,7 @@ static std::atomic<uint64_t> ex_epoch{0};
 static std::atomic<uint64_t> L1AccTot   {0}, L1MissTot   {0};
 static std::atomic<uint64_t> L2AccTot   {0}, L2MissTot   {0};
 static std::atomic<uint64_t> ClistTot   {0}, UnclistTot  {0}, CpageTot {0};
+static std::atomic<uint64_t> ExpansionCount {0}, PromotionCount {0}, HotlistCount {0};
 
 HashLL * clist = nullptr;
 HashLL * unclist = nullptr;
@@ -264,6 +265,18 @@ VOID CacheCall(THREADID tid, UINT32 op, UINT64 /*icount*/, UINT64 /*pc*/,
 		If it is in neither, it is a compressed page *outside* LRU
 		Eviction is needed for the compressed list, use knob for clist for frequency
  	*/		
+
+		if (ex_epoch.load(std::memory_order_relaxed)
+    		>= expansionFrequency.load(std::memory_order_relaxed)) {
+			PIN_GetLock(&unc_lock, tid+1);
+			PIN_GetLock(&c_lock,  tid+1);
+			bool ex_occurred = clist->swap_with(*unclist);       // promotion
+			ex_epoch.store(0);                     // both lists mutated
+			if (ex_occurred) ++ExpansionCount; // TODO: Statistics issue, this should be guarded, if expansion does not occur this should not be incremented.
+			PIN_ReleaseLock(&c_lock);
+			PIN_ReleaseLock(&unc_lock);
+		}
+
 		PIN_GetLock(&unc_lock, tid+1);
 		bool inUnc = (unclist->find_node(vp_addr) != nullptr);
 		bool unclFull = unclist->isFull();
@@ -274,15 +287,6 @@ VOID CacheCall(THREADID tid, UINT32 op, UINT64 /*icount*/, UINT64 /*pc*/,
 		bool clFull = clist->isFull();
 		PIN_ReleaseLock(&c_lock);
 
-		if (ex_epoch >= expansionFrequency) {
-			PIN_GetLock(&unc_lock, tid+1);
-			PIN_GetLock(&c_lock,  tid+1);
-			clist->swap_with(*unclist);       // promotion
-			ex_epoch = 0;                     // both lists mutated
-			PIN_ReleaseLock(&c_lock);
-			PIN_ReleaseLock(&unc_lock);
-		}
-
 		// 1) Try to fill unclist
 		if (!inUnc && !unclFull) {
 			PIN_GetLock(&unc_lock, tid+1);
@@ -290,7 +294,7 @@ VOID CacheCall(THREADID tid, UINT32 op, UINT64 /*icount*/, UINT64 /*pc*/,
 			++uc_epoch;
 			PIN_ReleaseLock(&unc_lock);
 		}
-		else if (!inCl && !clFull) {
+		else if (!inCl && !clFull && cl_epoch.load() <= clist_freq) {
 			// 2) Try to fill clist (only if unclist branch did NOT run)
 			PIN_GetLock(&c_lock, tid+1);
 			clist->touch(vp_addr);
@@ -304,6 +308,7 @@ VOID CacheCall(THREADID tid, UINT32 op, UINT64 /*icount*/, UINT64 /*pc*/,
 			++uc_epoch;
 			if (uc_epoch >= unclist_freq) {
 				unclist->touch(vp_addr);      // refresh order
+				++PromotionCount;
 				uc_epoch = 0;
 			} else {
 				unclist->increment_count(vp_addr);
@@ -320,11 +325,11 @@ VOID CacheCall(THREADID tid, UINT32 op, UINT64 /*icount*/, UINT64 /*pc*/,
 		victim = clist->find_node(vp_addr);
 		if (victim) {
 			++clist_access;
-
 			clist->touch(vp_addr);        // refresh / move to MRU
 			PIN_ReleaseLock(&c_lock);
 			return;
 		} else if (cl_epoch >= clist_freq) {         // insert new page, evicting LRU
+			++HotlistCount;
 			clist->touch(vp_addr);
 			++cpage_access;
 			cl_epoch = 0;
@@ -390,17 +395,21 @@ VOID WriteFinalReport()
 					<< ", misses: "     << l1Miss
 					<< ", L2 accesses: " << l2Acc
 					<< ", misses: "     << l2Miss
-					<< "\nClist Accesses: " << clist_access << " ("
+					<< "\nClist Accesses: " << ClistTot << " ("
 					<< std::fixed << std::setprecision(5) 
-					<< ((double)clist_access / (double)l2Miss) * 100.0 << "%)"
-					<< ", Unclist Accesses: " << unclist_access << " ("
+					<< ((double)ClistTot / (double)l2Miss) * 100.0 << "%)"
+					<< ", Unclist Accesses: " << UnclistTot << " ("
 					<< std::fixed << std::setprecision(5)
-					<< ((double)unclist_access / (double)l2Miss) * 100.0 << "%)"
-					<< ", Cpage Accesses: " << cpage_access << " ("
+					<< ((double)UnclistTot / (double)l2Miss) * 100.0 << "%)"
+					<< ", Cpage Accesses: " << CpageTot << " ("
 					<< std::fixed << std::setprecision(5)
-					<< ((double)cpage_access / (double)l2Miss) * 100.0 << "%)";
+					<< ((double)CpageTot / (double)l2Miss) * 100.0 << "%)";
 
 	std::cout << std::dec << "\n=========== PROGRAM FINISHED ============\n";
+	std::cout << "ExpansionCount: "   << ExpansionCount
+			  << ", PromotionCount: " << PromotionCount
+			  << ", HotlistCount: "   << HotlistCount
+			  << "\n";
 
     delete L2;
     delete unclist;

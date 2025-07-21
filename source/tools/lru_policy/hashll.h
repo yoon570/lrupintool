@@ -302,11 +302,11 @@ public:
     //   candidate goes MRU into other
     //   victim    goes LRU into this
     // -------------------------------------------------------------------
-    void swap_with(HashLL& other)
+    bool swap_with(HashLL& other)
     {
         hash_node* hot  = hottest_node();   // from *this*  (clist)
         hash_node* cold = other.lru_node(); // from other   (unclist)
-        if (!hot || !cold) return;
+        if (!hot || !cold) return false;
 
         // --- detach from their original owners ---
         unlink_node(hot);                         // correct: *this*
@@ -320,6 +320,7 @@ public:
         // --- splice into the opposite lists ---
         other.insert_mru_node(hot);               // hot → unclist (MRU)
         delete cold;
+        return true;
     }
 
 private:

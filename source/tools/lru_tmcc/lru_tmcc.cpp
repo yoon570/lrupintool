@@ -33,6 +33,9 @@ KNOB<UINT32> KnobUncompressedListSize
 KNOB<UINT32> KnobPromoteUncompressedFrequency
 						   	(KNOB_MODE_WRITEONCE, "pintool", "unclfreq","65536" ,
 							"Promotion frequency of uncompressed LRU list");
+KNOB<UINT32> KnobExpansionFrequency
+							(KNOB_MODE_WRITEONCE, "pintool", "exfreq",  "65536" ,
+							"Expansion frequency for promoting compressed page to uncompressed");
 KNOB<UINT64> KnobReportInterval
 							(KNOB_MODE_WRITEONCE, "pintool", "repival",  "10000000" , //10 mil by default
 							"Report interval in # of instructions");
@@ -44,11 +47,20 @@ enum { access_data=0};
 
 #define CACHELINE_OFFSET           0
 #define DATA_BLOCK_FLOOR_ADDR_MASK ~(static_cast<UINT64>(KnobBlkBytes.Value()-1))
+#define PAGE_SIZE				   4096
 
 
 static std::atomic<uint64_t> globalIns{0};
 static std::atomic<uint64_t> lastReportIns{0};
+static std::atomic<uint64_t> expansionFrequency{0};
 static std::atomic<uint64_t> uc_epoch{0};   // since last unclist *mutation*
+static std::atomic<uint64_t> ex_epoch{0};
+
+// At top of file, near other atomics
+static std::atomic<uint64_t> L1AccTot   {0}, L1MissTot   {0};
+static std::atomic<uint64_t> L2AccTot   {0}, L2MissTot   {0};
+static std::atomic<uint64_t> UnclistTot  {0}, CpageTot {0};
+static std::atomic<uint64_t> ExpansionCount {0}, PromotionCount {0};
 
 HashLL * unclist = nullptr;
 
@@ -169,9 +181,8 @@ std::vector<SimpleCache*> L1;                // per thread
 std::atomic<uint64_t> unclist_access {0};
 std::atomic<uint64_t> cpage_access   {0};
 
-
-std::atomic<uint64_t> unclist_freq	  = 0;
-std::atomic<uint64_t> report_interval = 0;
+std::atomic<uint64_t> unclist_freq	= 0;
+std::atomic<uint64_t> report_interval= 0;
 
 struct StatPack { 
 	std::atomic<uint64_t> ins=0;
@@ -230,7 +241,7 @@ VOID CacheCall(THREADID tid, UINT32 op, UINT64 /*icount*/, UINT64 /*pc*/,
         PIN_ReleaseLock(&l2Lock);
     }
 
-    if(!l2Hit){
+    if(!l2Hit) {
 	/*	
 		Procedure:
 		Check for promotions in compressed->uncompressed
@@ -241,23 +252,29 @@ VOID CacheCall(THREADID tid, UINT32 op, UINT64 /*icount*/, UINT64 /*pc*/,
 			Promotion of clist page is needed, evict from unclist and add new page
 		If it is in neither, it is a compressed page *outside* LRU
 		Eviction is needed for the compressed list, use knob for clist for frequency
- 	*/	
+ 	*/		
 		PIN_GetLock(&unc_lock, tid+1);
-		if (!unclist->isFull()) {
-			unclist->touch(vp_addr);          // insert as MRU
-			++unclist_access;
-			PIN_ReleaseLock(&unc_lock);
-			return;
-		}
+		bool inUnc = (unclist->find_node(vp_addr) != nullptr);
+		bool unclFull = unclist->isFull();
 		PIN_ReleaseLock(&unc_lock);
+
+		// 1) Try to fill unclist
+		if (!inUnc && !unclFull) {
+			PIN_GetLock(&unc_lock, tid+1);
+			unclist->touch(vp_addr);
+			++uc_epoch;
+			PIN_ReleaseLock(&unc_lock);
+		}
 
 		/*  Step 3 : page is already in unclist */
 		PIN_GetLock(&unc_lock, tid+1);
 		auto victim = unclist->find_node(vp_addr);
 		if (victim) {
 			++unclist_access;
+			++uc_epoch;
 			if (uc_epoch >= unclist_freq) {
 				unclist->touch(vp_addr);      // refresh order
+				++PromotionCount;
 				uc_epoch = 0;
 			} else {
 				unclist->increment_count(vp_addr);
@@ -266,11 +283,19 @@ VOID CacheCall(THREADID tid, UINT32 op, UINT64 /*icount*/, UINT64 /*pc*/,
 			return;
 		}
 		PIN_ReleaseLock(&unc_lock);
+		++ex_epoch;
+
+		if (ex_epoch >= expansionFrequency) {
+			PIN_GetLock(&unc_lock, tid+1);
+			unclist->touch(vp_addr);
+			ex_epoch = 0;                     // both lists mutated
+			++ExpansionCount;
+			PIN_ReleaseLock(&unc_lock);
+		}
 
 
 		/*  Step 5 : none of the above –– count as compressed-page miss */
 		PIN_GetLock(&cpage_lock, tid+1);
-		unclist->touch(vp_addr);
 		++cpage_access;
 		PIN_ReleaseLock(&cpage_lock);
     }
@@ -283,8 +308,6 @@ VOID RecordMemRead(VOID* ip, VOID* addr, UINT32 stk,
                    ADDRINT rbp, ADDRINT rsp, THREADID tid)
 {
 	EnsureThreadData(tid);
-	++uc_epoch;
-
     (void)ip; (void)rbp; (void)rsp; (void)stk;
     stats[tid]->memIns.fetch_add(1, std::memory_order_relaxed);
 	stats[tid]->reads.fetch_add(1, std::memory_order_relaxed);
@@ -298,8 +321,6 @@ VOID RecordMemWrite(VOID* ip, VOID* addr, UINT32 stk,
                     ADDRINT rbp, ADDRINT rsp, THREADID tid)
 {
 	EnsureThreadData(tid);
-	++uc_epoch;
-
     (void)ip; (void)rbp; (void)rsp; (void)stk;
     stats[tid]->memIns.fetch_add(1, std::memory_order_relaxed);
 	stats[tid]->writes.fetch_add(1, std::memory_order_relaxed);
@@ -311,30 +332,20 @@ VOID RecordMemWrite(VOID* ip, VOID* addr, UINT32 stk,
 
 VOID WriteFinalReport()
 {
-    uint64_t totIns = 0, totMem = 0, rd = 0, wr = 0;
-    for (auto& s : stats)
-    {
-        if (s)
-        {
-            totIns += s->ins.load(std::memory_order_relaxed);
-            totMem += s->memIns.load(std::memory_order_relaxed);
-            rd     += s->reads.load(std::memory_order_relaxed);
-            wr     += s->writes.load(std::memory_order_relaxed);
-        }
-    }
+	uint64_t l1Acc = 0, l1Miss = 0;
+    for (auto* c : L1) if (c) { l1Acc += c->Accesses(); l1Miss += c->Misses(); }
+    L1AccTot  += l1Acc;
+    L1MissTot += l1Miss;
 
-    uint64_t l1Acc = 0, l1Miss = 0;
-    for (auto* c : L1) {
-		if (!c)
-			continue;
-        l1Acc  += c->Accesses();
-        l1Miss += c->Misses();
-    }
+    uint64_t l2Acc  = L2 ? L2->Accesses() : 0;
+    uint64_t l2Miss = L2 ? L2->Misses()   : 0;
+    L2AccTot  += l2Acc;
+    L2MissTot += l2Miss;
 
-	uint64_t l2Acc  = L2 ? L2->Accesses() : 0;
-	uint64_t l2Miss = L2 ? L2->Misses()   : 0;
+    UnclistTot += unclist_access.load();
+    CpageTot   += cpage_access.load();
 
-	std::cout << "\n[Report @ " << globalIns << " instructions]\n"
+	std::cout << "\n[FINAL REPORT @ " << globalIns << " instructions]\n"
 					<< "L1 accesses: " << l1Acc
 					<< ", misses: "     << l1Miss
 					<< ", L2 accesses: " << l2Acc
@@ -347,6 +358,9 @@ VOID WriteFinalReport()
 					<< ((double)cpage_access / (double)l2Miss) * 100.0 << "%)";
 
 	std::cout << std::dec << "\n=========== PROGRAM FINISHED ============\n";
+	std::cout << "ExpansionCount: "   << ExpansionCount
+			  << ", PromotionCount: " << PromotionCount
+			  << "\n";
 
     delete L2;
     delete unclist;
@@ -401,9 +415,20 @@ VOID Instruction(INS ins, VOID*)
 					if (c) { l1Acc += c->Accesses(); l1Miss += c->Misses(); }
 				}
 
+
 				// -------- aggregate L2 --------
 				uint64_t l2Acc  = L2 ? L2->Accesses() : 0;
 				uint64_t l2Miss = L2 ? L2->Misses()   : 0;
+
+				// ----- accumulate grand-totals -----
+				L1AccTot   += l1Acc;
+				L1MissTot  += l1Miss;
+				L2AccTot   += l2Acc;
+				L2MissTot  += l2Miss;
+
+				UnclistTot += unclist_access.load();
+				CpageTot   += cpage_access.load();
+
 
 				// -------- print report --------
 				std::cout << "\n[Report @ " << cur << " instructions]\n"
@@ -417,6 +442,7 @@ VOID Instruction(INS ins, VOID*)
 						<< ", Cpage Accesses: " << cpage_access << " ("
 						<< std::fixed << std::setprecision(5)
         				<< ((double)cpage_access / (double)L2->Misses()) * 100.0 << "%)";
+						
 
 				// Statistics reset occurs here:
 				for (auto * c : L1)
@@ -500,10 +526,10 @@ int main(int argc, char* argv[])
 	uint32_t unclsize 	  = KnobUncompressedListSize.Value();
 	unclist_freq		  = KnobPromoteUncompressedFrequency.Value();
 	report_interval       = KnobReportInterval.Value();
-	expansionFrequency    = KnobExpansionFrequency.Value();
 	
 	// Initializing page doubly linked lists
 	unclist = new HASHLL::HashLL(unclsize);
+	expansionFrequency = KnobExpansionFrequency.Value();
 
 	/* 
 		Clist and unclist sizes are parameters... we need to measure RSS for those.
@@ -520,7 +546,6 @@ int main(int argc, char* argv[])
 	PIN_InitLock(&unc_lock);
 	PIN_InitLock(&cpage_lock);
 	PIN_InitLock(&init_lock);
-
 
     INS_AddInstrumentFunction(Instruction,  nullptr);
     PIN_AddThreadStartFunction(ThreadStart, nullptr);

@@ -319,9 +319,8 @@ public:
 
         // --- splice into the opposite lists ---
         other.insert_mru_node(hot);               // hot → unclist (MRU)
-        insert_lru_node(cold);                    // cold → clist  (LRU)
+        delete cold;
     }
-
 
 private:
     // -----------------------------------------------------------------------
