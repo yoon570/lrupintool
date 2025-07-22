@@ -295,33 +295,38 @@ public:
     }
 
     // -------------------------------------------------------------------
-    // Exchange a “hottest” node from this list with the LRU of another.
-    // - candidate = hottest in *this* (compressed)
-    // - victim    = LRU in other  (uncompressed)
-    // After swap:
-    //   candidate goes MRU into other
-    //   victim    goes LRU into this
+    // Expansion mechanism. Drops the cold node.
     // -------------------------------------------------------------------
-    bool swap_with(HashLL& other)
+    bool drop_cold_and_expand(HashLL& other)
     {
-        hash_node* hot  = hottest_node();   // from *this*  (clist)
-        hash_node* cold = other.lru_node(); // from other   (unclist)
-        if (!hot || !cold) return false;
+        // Find the hottest node in this list
+        hash_node* hot  = hottest_node();
+        if (!hot) {
+            // Nothing to promote
+            return false;
+        }
 
-        // --- detach from their original owners ---
-        unlink_node(hot);                         // correct: *this*
+        // Find the coldest node in the other list (may be nullptr)
+        hash_node* cold = other.lru_node();
+
+        // Detach and remove the hot node from this list
+        unlink_node(hot);
         table.erase(hot->vp_num);
         --size;
 
-        other.unlink_node(cold);                  // <-- FIX: use *other*
-        other.table.erase(cold->vp_num);
-        --other.size;
+        // If there's a cold node to evict from the other list, remove it
+        if (cold) {
+            other.unlink_node(cold);
+            other.table.erase(cold->vp_num);
+            --other.size;
+            delete cold;
+        }
 
-        // --- splice into the opposite lists ---
-        other.insert_mru_node(hot);               // hot → unclist (MRU)
-        delete cold;
+        // Splice the old-hot node into the MRU position of the other list
+        other.insert_mru_node(hot);
         return true;
     }
+
 
 private:
     // -----------------------------------------------------------------------

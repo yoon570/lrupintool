@@ -43,7 +43,7 @@ KNOB<UINT32> KnobExpansionFrequency
 							(KNOB_MODE_WRITEONCE, "pintool", "exfreq",  "65536" ,
 							"Expansion frequency for promoting compressed page to uncompressed");
 KNOB<UINT64> KnobReportInterval
-							(KNOB_MODE_WRITEONCE, "pintool", "repival",  "10000000" , //10 mil by default
+							(KNOB_MODE_WRITEONCE, "pintool", "repival",  "100000000" , //100 mil by default
 							"Report interval in # of instructions");
 // -----------------------------------------------------------------------
 // Constants
@@ -270,7 +270,7 @@ VOID CacheCall(THREADID tid, UINT32 op, UINT64 /*icount*/, UINT64 /*pc*/,
     		>= expansionFrequency.load(std::memory_order_relaxed)) {
 			PIN_GetLock(&unc_lock, tid+1);
 			PIN_GetLock(&c_lock,  tid+1);
-			bool ex_occurred = clist->swap_with(*unclist);       // promotion
+			bool ex_occurred = clist->drop_cold_and_expand(*unclist);       // promotion
 			ex_epoch.store(0);                     // both lists mutated
 			if (ex_occurred) ++ExpansionCount; // TODO: Statistics issue, this should be guarded, if expansion does not occur this should not be incremented.
 			PIN_ReleaseLock(&c_lock);
@@ -294,7 +294,7 @@ VOID CacheCall(THREADID tid, UINT32 op, UINT64 /*icount*/, UINT64 /*pc*/,
 			++uc_epoch;
 			PIN_ReleaseLock(&unc_lock);
 		}
-		else if (!inCl && !clFull && cl_epoch.load() <= clist_freq) {
+		else if (!inCl && !clFull && cl_epoch.load() <= clist_freq.load()) { // This appears to be the problematic line here.
 			// 2) Try to fill clist (only if unclist branch did NOT run)
 			PIN_GetLock(&c_lock, tid+1);
 			clist->touch(vp_addr);

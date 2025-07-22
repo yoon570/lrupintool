@@ -293,7 +293,6 @@ VOID CacheCall(THREADID tid, UINT32 op, UINT64 /*icount*/, UINT64 /*pc*/,
 			PIN_ReleaseLock(&unc_lock);
 		}
 
-
 		/*  Step 5 : none of the above –– count as compressed-page miss */
 		PIN_GetLock(&cpage_lock, tid+1);
 		++cpage_access;
