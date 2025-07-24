@@ -271,8 +271,12 @@ VOID CacheCall(THREADID tid, UINT32 op, UINT64 /*icount*/, UINT64 /*pc*/,
 			PIN_GetLock(&unc_lock, tid+1);
 			PIN_GetLock(&c_lock,  tid+1);
 			bool ex_occurred = clist->drop_cold_and_expand(*unclist);       // promotion
-			ex_epoch.store(0);                     // both lists mutated
-			if (ex_occurred) ++ExpansionCount; // TODO: Statistics issue, this should be guarded, if expansion does not occur this should not be incremented.
+
+			if (ex_occurred) 
+			{
+				++ExpansionCount; // TODO: Statistics issue, this should be guarded, if expansion does not occur this should not be incremented.
+				ex_epoch.store(0);// both lists mutated
+			}
 			PIN_ReleaseLock(&c_lock);
 			PIN_ReleaseLock(&unc_lock);
 		}
@@ -294,12 +298,13 @@ VOID CacheCall(THREADID tid, UINT32 op, UINT64 /*icount*/, UINT64 /*pc*/,
 			++uc_epoch;
 			PIN_ReleaseLock(&unc_lock);
 		}
-		else if (!inCl && !clFull && cl_epoch.load() <= clist_freq.load()) { // This appears to be the problematic line here.
+		else if (!inCl && !clFull && clist_freq.load() <= cl_epoch.load()) { // This appears to be the problematic line here.
 			// 2) Try to fill clist (only if unclist branch did NOT run)
 			PIN_GetLock(&c_lock, tid+1);
 			clist->touch(vp_addr);
 			PIN_ReleaseLock(&c_lock);
 		}
+
 		/*  Step 3 : page is already in unclist */
 		PIN_GetLock(&unc_lock, tid+1);
 		auto victim = unclist->find_node(vp_addr);
@@ -328,7 +333,8 @@ VOID CacheCall(THREADID tid, UINT32 op, UINT64 /*icount*/, UINT64 /*pc*/,
 			clist->touch(vp_addr);        // refresh / move to MRU
 			PIN_ReleaseLock(&c_lock);
 			return;
-		} else if (cl_epoch >= clist_freq) {         // insert new page, evicting LRU
+		} // add update requirement here (LRU updates)
+		else if (cl_epoch >= clist_freq) {         // insert new page, evicting LRU
 			++HotlistCount;
 			clist->touch(vp_addr);
 			++cpage_access;

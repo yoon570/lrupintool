@@ -283,7 +283,6 @@ VOID CacheCall(THREADID tid, UINT32 op, UINT64 /*icount*/, UINT64 /*pc*/,
 			return;
 		}
 		PIN_ReleaseLock(&unc_lock);
-		++ex_epoch;
 
 		if (ex_epoch >= expansionFrequency) {
 			PIN_GetLock(&unc_lock, tid+1);
@@ -296,6 +295,7 @@ VOID CacheCall(THREADID tid, UINT32 op, UINT64 /*icount*/, UINT64 /*pc*/,
 		/*  Step 5 : none of the above –– count as compressed-page miss */
 		PIN_GetLock(&cpage_lock, tid+1);
 		++cpage_access;
+		++ex_epoch;
 		PIN_ReleaseLock(&cpage_lock);
     }
 }

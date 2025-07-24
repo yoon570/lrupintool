@@ -46,7 +46,7 @@ int main(int argc, char** argv) {
     }
     volatile char* mem = (volatile char*)region;
 
-    for (long p = 0; p < pages; ++p)
+    for (long p = pages - 1; p > 0; --p)
         touch(mem + p * PAGE_SIZE);
 
     std::mt19937_64 rng((uint64_t)time(nullptr) ^ (uintptr_t)&rng);
