@@ -380,46 +380,60 @@ VOID RecordMemWrite(VOID* ip, VOID* addr, UINT32 stk,
               stk, false, access_data, vp_addr);
 }
 
-VOID WriteFinalReport()
+void WriteFinalReport()
 {
-	uint64_t l1Acc = 0, l1Miss = 0;
+    // Snapshot local stats
+    uint64_t l1Acc = 0, l1Miss = 0;
     for (auto* c : L1) if (c) { l1Acc += c->Accesses(); l1Miss += c->Misses(); }
-    L1AccTot  += l1Acc;
-    L1MissTot += l1Miss;
 
     uint64_t l2Acc  = L2 ? L2->Accesses() : 0;
     uint64_t l2Miss = L2 ? L2->Misses()   : 0;
-    L2AccTot  += l2Acc;
-    L2MissTot += l2Miss;
 
-    ClistTot   += clist_access.load();
-    UnclistTot += unclist_access.load();
-    CpageTot   += cpage_access.load();
+    uint64_t intervalUnc  = unclist_access.load(std::memory_order_relaxed);
+    uint64_t intervalCpg  = cpage_access.load(std::memory_order_relaxed);
 
-	std::cout << "\n[FINAL REPORT @ " << globalIns << " instructions]\n"
-					<< "L1 accesses: " << l1Acc
-					<< ", misses: "     << l1Miss
-					<< ", L2 accesses: " << l2Acc
-					<< ", misses: "     << l2Miss
-					<< "\nClist Accesses: " << ClistTot << " ("
-					<< std::fixed << std::setprecision(5) 
-					<< ((double)ClistTot / (double)l2Miss) * 100.0 << "%)"
-					<< ", Unclist Accesses: " << UnclistTot << " ("
-					<< std::fixed << std::setprecision(5)
-					<< ((double)UnclistTot / (double)l2Miss) * 100.0 << "%)"
-					<< ", Cpage Accesses: " << CpageTot << " ("
-					<< std::fixed << std::setprecision(5)
-					<< ((double)CpageTot / (double)l2Miss) * 100.0 << "%)";
+    // Reset per-interval counters
+    unclist_access.store(0, std::memory_order_relaxed);
+    cpage_access  .store(0, std::memory_order_relaxed);
+
+    // Accumulate grand totals
+    L1AccTot   += l1Acc;
+    L1MissTot  += l1Miss;
+    L2AccTot   += l2Acc;
+    L2MissTot  += l2Miss;
+    UnclistTot += intervalUnc;
+    CpageTot   += intervalCpg;
 
 	std::cout << std::dec << "\n=========== PROGRAM FINISHED ============\n";
-	std::cout << "ExpansionCount: "   << ExpansionCount
-			  << ", PromotionCount: " << PromotionCount
-			  << ", HotlistCount: "   << HotlistCount
-			  << "\n";
+    // Print interval report
+    std::cout << "\n[REPORT @ " << globalIns << " instructions]\n";
+    std::cout << " L1 accesses: " << l1Acc
+              << ", misses: "     << l1Miss << "\n";
+    std::cout << " L2 accesses: " << l2Acc
+              << ", misses: "     << l2Miss << "\n";
+    std::cout << " Unclist accesses: " << intervalUnc
+              << " (" << std::fixed << std::setprecision(2)
+              << (l2Miss ? (double)intervalUnc / l2Miss * 100.0 : 0.0) << "%)\n";
+    std::cout << " Cpage accesses:   " << intervalCpg
+              << " (" << std::fixed << std::setprecision(2)
+              << (l2Miss ? (double)intervalCpg  / l2Miss * 100.0 : 0.0) << "%)\n";
 
+    // Print final total report
+    std::cout << "\n[FINAL TOTALS]\n";
+    std::cout << " Total L1 accesses: " << L1AccTot
+              << ", misses: "        << L1MissTot << "\n";
+    std::cout << " Total L2 accesses: " << L2AccTot
+              << ", misses: "         << L2MissTot << "\n";
+    std::cout << " Total Unclist: " << UnclistTot
+              << " (" << std::fixed << std::setprecision(2)
+              << (L2MissTot ? (double)UnclistTot / L2MissTot * 100.0 : 0.0) << "%)\n";
+    std::cout << " Total Cpage:   " << CpageTot
+              << " (" << std::fixed << std::setprecision(2)
+              << (L2MissTot ? (double)CpageTot   / L2MissTot * 100.0 : 0.0) << "%)\n";
+
+    // Clean up
     delete L2;
     delete unclist;
-    delete clist;
 }
 
 
