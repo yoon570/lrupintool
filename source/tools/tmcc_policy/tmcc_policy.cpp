@@ -379,6 +379,8 @@ void WriteFinalReport()
     std::cout << " Total Cpage:   " << CpageTot
               << " (" << std::fixed << std::setprecision(2)
               << (L2MissTot ? (double)CpageTot   / L2MissTot * 100.0 : 0.0) << "%)\n";
+	std::cout << "ExpansionCount: " << ExpansionCount << "\n"
+	          << "PromotionCount: " << PromotionCount << "\n";
 
     // Clean up
     delete L2;

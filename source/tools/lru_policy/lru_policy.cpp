@@ -391,10 +391,12 @@ void WriteFinalReport()
 
     uint64_t intervalUnc  = unclist_access.load(std::memory_order_relaxed);
     uint64_t intervalCpg  = cpage_access.load(std::memory_order_relaxed);
+	uint64_t intervalClist= clist_access.load(std::memory_order_relaxed);
 
     // Reset per-interval counters
     unclist_access.store(0, std::memory_order_relaxed);
     cpage_access  .store(0, std::memory_order_relaxed);
+	clist_access  .store(0, std::memory_order_relaxed);
 
     // Accumulate grand totals
     L1AccTot   += l1Acc;
@@ -403,6 +405,7 @@ void WriteFinalReport()
     L2MissTot  += l2Miss;
     UnclistTot += intervalUnc;
     CpageTot   += intervalCpg;
+	ClistTot   += intervalClist;
 
 	std::cout << std::dec << "\n=========== PROGRAM FINISHED ============\n";
     // Print interval report
@@ -411,6 +414,9 @@ void WriteFinalReport()
               << ", misses: "     << l1Miss << "\n";
     std::cout << " L2 accesses: " << l2Acc
               << ", misses: "     << l2Miss << "\n";
+	std::cout << "Clist accesses: " << intervalClist
+              << " (" << std::fixed << std::setprecision(2)
+              << (l2Miss ? (double)intervalClist / l2Miss * 100.0 : 0.0) << "%)\n";
     std::cout << " Unclist accesses: " << intervalUnc
               << " (" << std::fixed << std::setprecision(2)
               << (l2Miss ? (double)intervalUnc / l2Miss * 100.0 : 0.0) << "%)\n";
@@ -424,12 +430,18 @@ void WriteFinalReport()
               << ", misses: "        << L1MissTot << "\n";
     std::cout << " Total L2 accesses: " << L2AccTot
               << ", misses: "         << L2MissTot << "\n";
+	std::cout << " Total Clist: " << ClistTot
+              << " (" << std::fixed << std::setprecision(2)
+              << (L2MissTot ? (double)ClistTot / L2MissTot * 100.0 : 0.0) << "%)\n";
     std::cout << " Total Unclist: " << UnclistTot
               << " (" << std::fixed << std::setprecision(2)
               << (L2MissTot ? (double)UnclistTot / L2MissTot * 100.0 : 0.0) << "%)\n";
     std::cout << " Total Cpage:   " << CpageTot
               << " (" << std::fixed << std::setprecision(2)
               << (L2MissTot ? (double)CpageTot   / L2MissTot * 100.0 : 0.0) << "%)\n";
+	std::cout << "ExpansionCount: " << ExpansionCount << "\n"
+	          << "PromotionCount: " << PromotionCount << "\n"
+			  << "HotlistCount: " << HotlistCount << "\n";
 
     // Clean up
     delete L2;
