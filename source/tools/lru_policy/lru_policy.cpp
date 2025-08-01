@@ -528,6 +528,9 @@ VOID Instruction(INS ins, VOID*)
 						<< ", Cpage Accesses: " << cpage_access << " ("
 						<< std::fixed << std::setprecision(5)
         				<< ((double)cpage_access / (double)L2->Misses()) * 100.0 << "%)";
+						std::cout << "\nExpansionCount: " << ExpansionCount << "\n"
+						<< "PromotionCount: " << PromotionCount << "\n"
+						<< "HotlistCount: " << HotlistCount << "\n";
 						
 
 				// Statistics reset occurs here:
