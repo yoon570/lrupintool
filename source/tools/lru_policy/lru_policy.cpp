@@ -746,6 +746,7 @@ int main(int argc, char* argv[])
 		<< "\nREPORTIVAL: " << report_interval
 		<< "\nCACHELINE SIZE: " << KnobBlkBytes.Value()
 		<< "\nTRACEENABLE: " << KnobTraceEnable.Value()
+		<< "\nFFTARGET: " << KnobFastForward.Value()
 		<< "\nL1Size: " << KnobL1Size.Value()
 		<< "\nL1Assoc: " << KnobL1Assoc.Value()
 		<< "\nL2Size: " << KnobL2Size.Value()
